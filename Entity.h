@@ -19,7 +19,9 @@ private:
         CTexture,
         CSpriteSet,
         CSpriteStack,
-        CAnimation
+        CAnimation,
+        CVoxel,
+        CText
         > m_components;
     const std::string m_tag = "NONE";
     bool m_active{true};

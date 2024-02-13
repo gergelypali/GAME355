@@ -43,12 +43,10 @@ void SceneMenu::init()
     // add some menu music and button sounds
     m_ge->assetManager()->AddSound("buttonClick", "audio/buttonClick.mp3");
     m_ge->assetManager()->AddMusic("menuMusic", "audio/menuMusic.mp3");
-    m_ge->playMusic("menuMusic");
 }
 
 void SceneMenu::endScene()
 {
-    
 }
 
 void SceneMenu::update()
@@ -141,7 +139,7 @@ void SceneMenu::useActiveMenu()
 {
     switch(m_activeMenu)
     {
-        case(0): m_ge->changeScene("ScenePlay"); break;
+        case(0): m_ge->changeScene("SceneOne"); break;
         case(1): m_ge->stopGameloop(); break;
         default: break;
     }

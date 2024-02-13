@@ -8,6 +8,8 @@
 #include <random>
 #define SDL_MAIN_HANDLED
 #include <SDL.h>
+#include <SDL_ttf.h>
+#include "Vector.h"
 
 class Scene;
 class AssetManager;
@@ -15,8 +17,9 @@ class AssetManager;
 class GameEngine
 {
 private:
-    const double FPS = 60.0;
-    const double TICKS_PER_FRAME = 1000.0 / FPS;
+    double MAXFPS = 60.0;
+    double FPS = MAXFPS;
+    double TICKS_PER_FRAME = 1000.0 / FPS;
 
     // main game variables
     bool m_running{true};
@@ -43,6 +46,7 @@ private:
     void update();
     std::shared_ptr<Scene> currentScene() { return m_scenes[m_currentScene]; };
     void quit();
+    void updateFPS(const double frameLength);
 
     // systems
     void sUserInput();
@@ -107,6 +111,9 @@ public:
     /// @brief get the actual fps of the game
     /// @return fps value
     const double getFPS() { return FPS; };
+
+    /// @brief Render a given text to the screen
+    void renderText(const std::string& textToRender, TTF_Font* font, const SDL_Color& color, int fontSize, const MATH::Vec2& pos);
 
 };
 

@@ -142,7 +142,7 @@ void SceneEnd::useActiveMenu()
 {
     switch(m_activeMenu)
     {
-        case(0): m_ge->changeScene("ScenePlay"); break;
+        case(0): m_ge->changeScene("SceneOne"); break;
         case(1): m_ge->stopGameloop(); break;
         default: break;
     }

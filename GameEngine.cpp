@@ -1,5 +1,6 @@
 #include "GameEngine.h"
 #include "ScenePlay.h"
+#include "SceneOne.h"
 #include "SceneMenu.h"
 #include "SceneEnd.h"
 #include "Action.h"
@@ -8,6 +9,7 @@
 
 void GameEngine::init()
 {
+    // TODO: load everything from a or multiple config files, everything means every config that is relevant to be in a configfile
     if (SDL_Init(SDL_INIT_VIDEO || SDL_INIT_AUDIO) < 0)
         printf("SDL init failed! With SDL_Error: %s\n", SDL_GetError());
 
@@ -24,8 +26,11 @@ void GameEngine::init()
 
     if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 8, 2048) < 0)
         printf("MIX_openAudio failed! With SDL_Error: %s\n", Mix_GetError());
-    m_soundVolume = MIX_MAX_VOLUME / 2;
-    m_musicVolume = MIX_MAX_VOLUME / 2;
+    m_soundVolume = MIX_MAX_VOLUME / 20;
+    m_musicVolume = MIX_MAX_VOLUME / 20;
+
+    if (TTF_Init() < 0)
+        printf("SDL_TTF init failed! With SDL_Error: %s\n", Mix_GetError());
 
     m_am = std::make_shared<AssetManager>(this);
 }
@@ -43,7 +48,14 @@ void GameEngine::quit()
     m_window = nullptr;
     IMG_Quit();
     Mix_Quit();
+    TTF_Quit();
     SDL_Quit();
+}
+
+void GameEngine::updateFPS(const double frameLength)
+{
+    FPS = std::min(MAXFPS, 1000.0 / frameLength);
+    TICKS_PER_FRAME = 1000.0 / FPS;
 }
 
 void GameEngine::run()
@@ -64,10 +76,16 @@ void GameEngine::run()
                 m_running = false;
             if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_Q)
                 m_running = false;
+            /* just for debugging and testing
             if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_U)
-                changeScene("ScenePlay");
+                changeScene("SceneOne");
             if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_I)
                 changeScene("SceneMenu");
+            if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_N)
+                MAXFPS += 10;
+            if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_M)
+                MAXFPS -= 10;
+            */
             
             if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP)
             {
@@ -76,7 +94,21 @@ void GameEngine::run()
                 if (currentScene()->getActionMap().find(event.key.keysym.scancode) == currentScene()->getActionMap().end())
                     continue;
                 const std::string type = (event.type == SDL_KEYDOWN) ? "START" : "END";
-                currentScene()->doAction(Action(currentScene()->getActionMap()[(event.key.keysym.scancode)], type));
+                currentScene()->doAction(Action(currentScene()->getActionMap()[(event.key.keysym.scancode)], type, event));
+            }
+            else if (event.type == SDL_MOUSEBUTTONDOWN || event.type == SDL_MOUSEBUTTONUP)
+            {
+                if (currentScene()->getActionMap().find(event.button.button) == currentScene()->getActionMap().end())
+                    continue;
+                const std::string type = (event.type == SDL_MOUSEBUTTONDOWN) ? "START" : "END";
+                currentScene()->doAction(Action(currentScene()->getActionMap()[(event.button.button)], type, event));
+            }
+            else if (event.type == SDL_MOUSEMOTION)
+            {
+                if (currentScene()->getActionMap().find(event.motion.type) == currentScene()->getActionMap().end())
+                    continue;
+                const std::string type = "START";
+                currentScene()->doAction(Action(currentScene()->getActionMap()[(event.motion.type)], type, event));
             }
         }
 
@@ -85,8 +117,10 @@ void GameEngine::run()
 
         // check deltaTime, so we can force the FPS
         auto endTick = SDL_GetTicks();
-        if (endTick - startTick < TICKS_PER_FRAME)
-            SDL_Delay(TICKS_PER_FRAME - (endTick - startTick));
+        auto frameLength{endTick - startTick};
+        updateFPS(frameLength);
+        if (frameLength < TICKS_PER_FRAME)
+            SDL_Delay(TICKS_PER_FRAME - (frameLength));
     }
 }
 
@@ -105,15 +139,19 @@ void GameEngine::changeScene(std::string newScene)
         m_scenes[m_currentScene] = std::make_shared<SceneMenu>(SceneMenu(this));
     else if (m_currentScene == "SceneEnd")
         m_scenes[m_currentScene] = std::make_shared<SceneEnd>(SceneEnd(this));
+    else if (m_currentScene == "SceneOne")
+        m_scenes[m_currentScene] = std::make_shared<SceneOne>(SceneOne(this));
 }
 
 void GameEngine::playSound(const std::string& name)
 {
+    Mix_Volume(-1, m_soundVolume);
     Mix_PlayChannel(-1, m_am->GetSound(name), 0);
 }
 
 void GameEngine::playMusic(const std::string& name)
 {
+    Mix_VolumeMusic(m_musicVolume);
     Mix_PlayMusic(m_am->GetMusic(name), -1);
 }
 
@@ -134,4 +172,28 @@ void GameEngine::changeMusicVolume(int changeBy)
     m_musicVolume = std::max(0, m_musicVolume + MIX_MAX_VOLUME * changeBy / 100);
     Mix_VolumeMusic(m_musicVolume);
     m_musicVolume = Mix_VolumeMusic(-1);
+}
+
+void GameEngine::renderText(const std::string& textToRender, TTF_Font* font, const SDL_Color& color, int fontSize, const MATH::Vec2& pos)
+{
+    // TODO optimalization: static and dynamic text in different storage; so for static we are not destroying the texture every time but reuse it in every render cycle
+    // in that way we can do the rendering faster; dynamic text is the usual, every time create a new texture and render it, or check if the text has changed, aaaaand
+    // create a new texture in that case only
+
+    TTF_SetFontSize(font, fontSize);
+    SDL_Surface* textSurface = TTF_RenderText_Solid(font, textToRender.c_str(), color);
+    SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer(), textSurface);
+    SDL_SetTextureBlendMode(textTexture, SDL_BlendMode::SDL_BLENDMODE_BLEND);
+    // can add alpha to text also
+    //SDL_SetTextureAlphaMod(textTexture, textBufferMap[index].alpha);
+    SDL_Rect rect;
+    rect.x = pos.x - (textSurface->w / 2.0f);
+    rect.y = pos.y - (textSurface->h / 2.0f);
+    rect.w = textSurface->w;
+    rect.h = textSurface->h;
+
+    SDL_RenderCopy(renderer(), textTexture, NULL, &rect);
+
+    SDL_DestroyTexture(textTexture);
+    SDL_FreeSurface(textSurface);
 }

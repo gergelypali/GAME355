@@ -7,6 +7,7 @@
 #include <vector>
 #include <SDL_image.h>
 #include <SDL_mixer.h>
+#include <SDL_ttf.h>
 
 class GameEngine;
 class Animation;
@@ -21,6 +22,9 @@ private:
     std::map<std::string, std::shared_ptr<Animation>> m_animations;
     std::map<std::string, Mix_Chunk*> m_sounds;
     std::map<std::string, Mix_Music*> m_musics;
+    std::map<std::string, TTF_Font*> m_fonts;
+
+    int m_initFontSize{50};
 
 public:
     AssetManager() = delete;
@@ -48,6 +52,9 @@ public:
     std::shared_ptr<Animation> GetAnimation(const std::string& name);
     Mix_Chunk* GetSound(const std::string& name);
     Mix_Music* GetMusic(const std::string& name);
+
+    void AddFont(const std::string& name, const std::string& pathToFile);
+    TTF_Font* GetFont(const std::string& name);
 
 };
 

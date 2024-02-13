@@ -22,6 +22,10 @@ namespace MATH {
 						a.x * b.y - a.y * b.x);
 		}
 
+		inline static float mag(const Vec2 &a) {
+			return(sqrt(a.x * a.x + a.y * a.y));
+		}
+
 		inline static float mag(const Vec3 &a) {
 			return(sqrt(a.x * a.x + a.y * a.y + a.z * a.z));
 		}

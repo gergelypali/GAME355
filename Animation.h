@@ -16,7 +16,7 @@ public:
             m_animSteps = m_animSequence.size();
         };
 
-    std::pair<int,int>& getNextSpriteToDraw();
+    std::pair<int,int>& getNextSpriteToDraw(const double frameLength);
 
 private:
     int m_animSteps{0};// numbers of sprites on the sequence

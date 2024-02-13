@@ -40,7 +40,9 @@ public:
     void drawTexture(std::shared_ptr<Entity> &entity);
     void drawSpriteSet(std::shared_ptr<Entity> &entity);
     void drawSpriteStack(std::shared_ptr<Entity> &entity);
+    void drawVoxel(std::shared_ptr<Entity> &entity);
     void drawAnimation(std::shared_ptr<Entity> &entity);
+    void drawText(std::shared_ptr<Entity> &entity);
 };
 
 #endif

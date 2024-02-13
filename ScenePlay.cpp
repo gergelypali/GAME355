@@ -11,12 +11,11 @@ void ScenePlay::init()
 {
     m_em = std::make_shared<EntityManager>();
 
-    m_bg = m_em->addEntity("BG");
-    int windowX, windowY;
     SDL_GetWindowSize(m_ge->window(), &windowX, &windowY);
-    m_bg->addComponent<CRectBody>(windowX, windowY, MATH::Vec4(0, 0x0, 0xFF, 0x0));
-    m_bg->addComponent<CAABB>(windowX, windowY);
-    m_bg->addComponent<CTransform>(MATH::Vec2{windowX/2, windowY/2});
+    m_map = m_em->addEntity("map");
+    m_map->addComponent<CRectBody>(2000, 2000, MATH::Vec4(0x0, 0x0, 0xFF, 0xFF));
+    m_map->addComponent<CAABB>(2000, 2000);
+    m_map->addComponent<CTransform>(MATH::Vec2{1000, 1000});
 
     // add the tiles here for creating the map's visualization
     initMapTiles();
@@ -24,6 +23,11 @@ void ScenePlay::init()
     spawnPlayer();
 
     spawnEnemy(0);
+
+    createHUD();
+
+    m_camera = m_em->addEntity("Camera");
+    m_camera->addComponent<CTransform>(MATH::Vec2{0,0});
 
     // create actionMap for this scene; can create a function from this, so the init will call it every time, pure virtual function in scene
     registerAction(SDL_SCANCODE_W, "UP");
@@ -34,14 +38,16 @@ void ScenePlay::init()
 
 void ScenePlay::endScene()
 {
-    
+
 }
 
 void ScenePlay::update()
 {
+    // TODO: find a way to cycle through the entities only one time per update; not in every method: once for physics, once for movement etc...
     m_em->update();
     sPhysics();
     sMovement();
+    sUpdateCamera();
     sRender();
     sCheckGameState();
     m_currentFrame++;
@@ -49,32 +55,43 @@ void ScenePlay::update()
 
 void ScenePlay::sRender()
 {
-    SDL_SetRenderDrawColor(m_ge->renderer(), 0xFF, 0xFF, 0xFF, 0x0);
+    SDL_SetRenderDrawColor(m_ge->renderer(), 0xFF, 0xFF, 0x0, 0xFF);
     SDL_RenderClear(m_ge->renderer());
     SDL_SetRenderDrawBlendMode(m_ge->renderer(), SDL_BLENDMODE_BLEND);
 
     for (auto& entity: m_em->getEntities())
     {
-        if (entity->hasComponent<CTransform>() && entity->hasComponent<CRectBody>())
+        if (entity->hasComponent<CTransform>())
         {
-            if (entity->hasComponent<CTexture>())
+            if (entity->hasComponent<CText>())
             {
-                drawTexture(entity);
+                drawText(entity);
             }
-            else if (entity->hasComponent<CSpriteSet>())
+            if (entity->hasComponent<CRectBody>())
             {
-                if (entity->hasComponent<CAnimation>())
-                    drawAnimation(entity);
+                if (entity->hasComponent<CTexture>())
+                {
+                    drawTexture(entity);
+                }
+                else if (entity->hasComponent<CSpriteSet>())
+                {
+                    if (entity->hasComponent<CAnimation>())
+                        drawAnimation(entity);
+                    else
+                        drawSpriteSet(entity);
+                }
+                else if (entity->hasComponent<CSpriteStack>())
+                {
+                    drawSpriteStack(entity);
+                }
+                else if (entity->hasComponent<CVoxel>())
+                {
+                    drawVoxel(entity);
+                }
                 else
-                    drawSpriteSet(entity);
-            }
-            else if (entity->hasComponent<CSpriteStack>())
-            {
-                drawSpriteStack(entity);
-            }
-            else
-            {
-                drawRect(entity);
+                {
+                    drawRect(entity);
+                }
             }
         }
     }
@@ -101,7 +118,7 @@ void ScenePlay::sDoAction(const Action& action)
     else if (action.name() == "LEFT")
     {
         state.turning = action.type() == "START";
-        transform.turnSpeed *= -1;
+        transform.maxTurnSpeed *= -1;
     }
     else if (action.name() == "RIGHT")
     {
@@ -140,7 +157,7 @@ void ScenePlay::sMovement()
                 transform.pos = transform.pos + transform.vel;
 
             if (state.turning)
-                transform.angle = transform.angle + transform.turnSpeed / m_ge->getFPS();
+                transform.angle = transform.angle + transform.turnSpeed;
 
         }
     }
@@ -154,6 +171,8 @@ void ScenePlay::playerPhysicsUpdate()
         double realAngle = fmod(transform.angle, 360.0) * M_PI / 180.0;
         auto currentMoveSpeed = (float)transform.moveSpeed / m_ge->getFPS();
         transform.vel = MATH::Vec2{cosf(realAngle), sinf(realAngle)} * currentMoveSpeed;
+
+        transform.turnSpeed = transform.maxTurnSpeed / m_ge->getFPS();
     }
 }
 
@@ -162,7 +181,7 @@ void ScenePlay::reactToMapBorder()
     // check every enemy
     for ( auto& enemy: m_em->getEntities("Enemy"))
     {
-        std::pair<bool, bool> checkRes{checkInsideEntity(enemy, m_bg)};
+        std::pair<bool, bool> checkRes{checkInsideEntity(enemy, m_map)};
         if (checkRes.first)
             enemy->getComponent<CTransform>().vel.x *= -1;
         if (checkRes.second)
@@ -170,7 +189,7 @@ void ScenePlay::reactToMapBorder()
     }
 
     // player part of the checking
-    std::pair<bool, bool> playerCheckRes{checkInsideEntity(m_player, m_bg)};
+    std::pair<bool, bool> playerCheckRes{checkInsideEntity(m_player, m_map)};
     if (playerCheckRes.first)
         m_player->getComponent<CTransform>().vel.x = 0;
     if (playerCheckRes.second)
@@ -187,6 +206,27 @@ void ScenePlay::sPhysics()
 void ScenePlay::sCheckGameState()
 {
     checkEnd();
+}
+
+void ScenePlay::sUpdateCamera()
+{
+    // here we move the camera around as an entity
+    // update the location of the camera after everything moved with sMovement
+    // update the transform's camera's world position for every entity so the rendering will use that position
+    auto& camera = m_camera->getComponent<CTransform>();
+    // this is the main logic to move the camera around, now we just follow the player and adjust the view to be center of the screen
+    camera.pos.x = m_player->getComponent<CTransform>().pos.x - windowX / 2;
+    camera.pos.y = m_player->getComponent<CTransform>().pos.y - windowY / 2;
+
+    for (auto& entity: m_em->getEntities())
+    {
+        if (!entity->getComponent<CState>().cameraIndependent && entity->hasComponent<CTransform>())
+        {
+            auto& transform = entity->getComponent<CTransform>();
+            transform.cameraViewPos.x = transform.pos.x - camera.pos.x;
+            transform.cameraViewPos.y = transform.pos.y - camera.pos.y;
+        }
+    }
 }
 
 void ScenePlay::spawnEnemy(int number)
@@ -215,14 +255,15 @@ void ScenePlay::spawnPlayer()
 {
     m_player = m_em->addEntity("Player");
 
-    int playerWidth{32}, playerHeight{32};
-    m_player->addComponent<CTransform>(MATH::Vec2(200.f, 200.f), MATH::Vec2(0.f, 0.f), 0, 90, 128);
+    int playerWidth{40}, playerHeight{40};
+    m_player->addComponent<CTransform>(MATH::Vec2{windowX/2, windowY/2}, MATH::Vec2(0.f, 0.f), 0, 90, 128);
     m_player->addComponent<CRectBody>(playerWidth, playerHeight);
     m_player->addComponent<CAABB>(playerWidth, playerHeight);
     m_player->addComponent<CScore>();
     int w, h;
-    SDL_QueryTexture(m_ge->assetManager()->GetTexture("spriteStackPurpleCar"), NULL, NULL, &w, &h);
-    m_player->addComponent<CSpriteStack>("spriteStackPurpleCar", 1, 8, w, h, playerHeight/h);
+    SDL_QueryTexture(m_ge->assetManager()->GetTexture("house1"), NULL, NULL, &w, &h);
+    //m_player->addComponent<CSpriteStack>("spriteStackPurpleCar", 1, 8, w, h, playerHeight/h);
+    m_player->addComponent<CVoxel>("house1", 80, 1, w, h, playerHeight);
     m_player->addComponent<CState>();
 }
 
@@ -233,6 +274,7 @@ void ScenePlay::collisionWithPlayer()
         if (checkEntityCollision(enemy, m_player))
         {
             m_player->getComponent<CScore>().score += 1;
+            m_HUD.mainScoreNumber->getComponent<CText>().text = std::to_string(m_player->getComponent<CScore>().score);
             std::string newName{""};
             int frameCount{0};
             switch(m_player->getComponent<CScore>().score)
@@ -378,6 +420,27 @@ void ScenePlay::checkEnd()
 {
     if (m_player->getComponent<CScore>().score > 2)
         m_ge->changeScene("SceneEnd");
+}
+
+void ScenePlay::createHUD()
+{
+    // TODO: create a better render ordering system; with layers and order in a given layer, so we can give precise order to render the objects
+    // TODO: also some kind of culling system, so we are not rendering objects that are not on the screen, just calculate the other changes: physics, collision, etc
+    m_HUD.upperBar = m_em->addEntity("HUDelement");
+    m_HUD.upperBar->addComponent<CRectBody>(windowX, 48, MATH::Vec4{0xFF, 0, 0xFF, 0xFF});
+    m_HUD.upperBar->addComponent<CTransform>(MATH::Vec2{windowX / 2, 24});
+    m_HUD.upperBar->addComponent<CState>();
+    m_HUD.upperBar->getComponent<CState>().cameraIndependent = true;
+    m_HUD.mainScoreText = m_em->addEntity("HUDelement");
+    m_HUD.mainScoreText->addComponent<CText>("SCORE: ", m_ge->assetManager()->GetFont("Nasa21"), SDL_Color{0,0,0}, 30);
+    m_HUD.mainScoreText->addComponent<CTransform>(MATH::Vec2{100, 25});
+    m_HUD.mainScoreText->addComponent<CState>();
+    m_HUD.mainScoreText->getComponent<CState>().cameraIndependent = true;
+    m_HUD.mainScoreNumber = m_em->addEntity("HUDelement");
+    m_HUD.mainScoreNumber->addComponent<CText>(m_player->getComponent<CScore>().score, m_ge->assetManager()->GetFont("Nasa21"), SDL_Color{0,0,0}, 30);
+    m_HUD.mainScoreNumber->addComponent<CTransform>(MATH::Vec2{200, 25});
+    m_HUD.mainScoreNumber->addComponent<CState>();
+    m_HUD.mainScoreNumber->getComponent<CState>().cameraIndependent = true;
 }
 
 void ScenePlay::changePlayerSkin(const std::string &name, int frameCount)

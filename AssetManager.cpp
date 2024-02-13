@@ -28,15 +28,26 @@ AssetManager::AssetManager(GameEngine* ge)
     AddTexture("exitGameButton", "textures/exitGameButtonText.png");
     AddTexture("exitGameButtonAnim", "textures/exitGameButtonAnim.png");
     AddTexture("retryGameButtonAnim", "textures/retryGameButtonAnim.png");
+    AddTexture("arachnoid", "textures/Arachnoid.png");
+    AddTexture("house1", "textures/TallBuilding01.png");
+    AddTexture("cityBG", "textures/cityBG.jpg");
 
     // and animations
-    AddAnimation("walkDown", 20, std::vector<std::pair<int,int>>{std::pair{0, 0}, std::pair{0, 1}, std::pair{0, 2}, std::pair{0, 3}});
-    AddAnimation("walkLeft", 20, std::vector<std::pair<int,int>>{std::pair{2, 0}, std::pair{2, 1}, std::pair{2, 2}, std::pair{2, 3}});
-    AddAnimation("walkUp", 20, std::vector<std::pair<int,int>>{std::pair{4, 0}, std::pair{4, 1}, std::pair{4, 2}, std::pair{4, 3}});
-    AddAnimation("walkRight", 20, std::vector<std::pair<int,int>>{std::pair{6, 0}, std::pair{6, 1}, std::pair{6, 2}, std::pair{6, 3}});
+    AddAnimation("walkDown", 150, std::vector<std::pair<int,int>>{std::pair{0, 0}, std::pair{0, 1}, std::pair{0, 2}, std::pair{0, 3}});
+    AddAnimation("walkLeft", 150, std::vector<std::pair<int,int>>{std::pair{2, 0}, std::pair{2, 1}, std::pair{2, 2}, std::pair{2, 3}});
+    AddAnimation("walkUp", 150, std::vector<std::pair<int,int>>{std::pair{4, 0}, std::pair{4, 1}, std::pair{4, 2}, std::pair{4, 3}});
+    AddAnimation("walkRight", 150, std::vector<std::pair<int,int>>{std::pair{6, 0}, std::pair{6, 1}, std::pair{6, 2}, std::pair{6, 3}});
 
     // menu animations
-    AddAnimation("menuButtonAnim", 10, std::vector<std::pair<int,int>>{std::pair{0, 0}, std::pair{0, 1}, std::pair{0, 2}, std::pair{1, 0}, std::pair{1, 1}, std::pair{1, 2}, std::pair{2, 0}, std::pair{2, 1}, std::pair{2, 2}});
+    AddAnimation("menuButtonAnim", 168, std::vector<std::pair<int,int>>{std::pair{0, 0}, std::pair{0, 1}, std::pair{0, 2}, std::pair{1, 0}, std::pair{1, 1}, std::pair{1, 2}, std::pair{2, 0}, std::pair{2, 1}, std::pair{2, 2}});
+
+    // fonts
+    //AddFont("Branda", "fonts/Branda.ttf");
+    //AddFont("ChrustyRock", "fonts/ChrustyRock.ttf");
+    //AddFont("Debrosee", "fonts/Debrosee.ttf");
+    //AddFont("Guazhiru", "fonts/Guazhiru.ttf");
+    AddFont("Nasa21", "fonts/Nasa21.ttf");
+    //AddFont("ToThePoint", "fonts/ToThePoint.ttf");
 }
 
 AssetManager::~AssetManager()
@@ -122,4 +133,21 @@ Mix_Chunk *AssetManager::GetSound(const std::string &name)
 Mix_Music *AssetManager::GetMusic(const std::string &name)
 {
     return m_musics[name];
+}
+
+void AssetManager::AddFont(const std::string &name, const std::string &pathToFile)
+{
+    auto newFont = TTF_OpenFont(pathToFile.c_str(), m_initFontSize);
+    if (newFont == nullptr)
+    {
+        printf("Cannot load font file %s! With SDL_Error: %s\n", pathToFile, SDL_GetError());
+        return;
+    }
+
+    m_fonts[name] = newFont;
+}
+
+TTF_Font *AssetManager::GetFont(const std::string &name)
+{
+    return m_fonts[name];
 }

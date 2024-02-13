@@ -5,6 +5,8 @@
 #include "VMath.h"
 #include <SDL.h>
 #include <memory>
+#include <SDL_ttf.h>
+#include <cstring>
 
 class Animation;
 
@@ -19,15 +21,19 @@ class CTransform : public Component
 {
 public:
     CTransform() {};
-    CTransform(MATH::Vec2 startingPos) : pos(startingPos) {};
+    CTransform(MATH::Vec2 startingPos) : pos(startingPos), cameraViewPos(startingPos) {};
     CTransform(MATH::Vec2 startingPos, MATH::Vec2 startingVel, double angleInit, double turnSpeedInit, int moveSpeedInit)
-        : pos(startingPos), vel(startingVel), angle(angleInit), turnSpeed(turnSpeedInit), moveSpeed(moveSpeedInit) {};
+        : pos(startingPos), cameraViewPos(startingPos), vel(startingVel), angle(angleInit), turnSpeed(turnSpeedInit), maxTurnSpeed(turnSpeedInit), moveSpeed(moveSpeedInit), maxMoveSpeed(moveSpeedInit) {};
 
     MATH::Vec2 pos{0.f, 0.f};
+    MATH::Vec2 cameraViewPos{0.f, 0.f};
     MATH::Vec2 vel{0.f, 0.f};
     double angle{0};
+    int turnDirection{1};
     double turnSpeed{0};
+    double maxTurnSpeed{0};
     int moveSpeed{0};
+    int maxMoveSpeed{0};
 
 };
 
@@ -56,6 +62,7 @@ public:
 
     bool turning{false};
     bool moving{false};
+    bool cameraIndependent{false};
 
 };
 
@@ -182,6 +189,27 @@ public:
 
 };
 
+class CVoxel : public Component
+{
+public:
+    CVoxel() {};
+    CVoxel(const std::string& theName, int rowNbr, int columnNbr, int initW, int initH, int playerHeight)
+        : name(theName), w(initW / columnNbr), h(initH / rowNbr), rowNumber(rowNbr), columnNumber(columnNbr) {
+            cutoutRect.x = 0;
+            cutoutRect.y = (rowNbr - 1) * h;
+            cutoutRect.w = w;
+            cutoutRect.h = h;
+            step = playerHeight / h;
+        };
+
+    std::string name{""};
+    int w{0}, h{0};
+    SDL_Rect cutoutRect{0, 0, 0, 0};
+    int rowNumber{};
+    int columnNumber{};
+    int step{};
+};
+
 class CAnimation : public Component
 {
 public:
@@ -189,6 +217,20 @@ public:
     CAnimation(std::shared_ptr<Animation> newAnim) : anim(newAnim) {};
 
     std::shared_ptr<Animation> anim{nullptr};
+
+};
+
+class CText : public Component
+{
+public:
+    CText() {};
+    CText(std::string textInit, TTF_Font* fontInit, const SDL_Color& colorInit, int fontSizeInit) : text(textInit), font(fontInit), color(colorInit), fontSize(fontSizeInit) {};
+    CText(int textInit, TTF_Font* fontInit, const SDL_Color& colorInit, int fontSizeInit) : text(std::to_string(textInit)), font(fontInit), color(colorInit), fontSize(fontSizeInit) {};
+
+    std::string text{""};
+    TTF_Font* font{nullptr};
+    SDL_Color color{};
+    int fontSize{0};
 
 };
 

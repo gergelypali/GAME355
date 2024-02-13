@@ -23,8 +23,8 @@ void Scene::drawRect(std::shared_ptr<Entity> &entity)
     auto& body = entity->getComponent<CRectBody>();
 
     SDL_Rect fillRect{
-        (int)transform.pos.x - body.halfWidth(),
-        (int)transform.pos.y - body.halfHeight(),
+        (int)transform.cameraViewPos.x - body.halfWidth(),
+        (int)transform.cameraViewPos.y - body.halfHeight(),
         body.width(),
         body.height()
     };
@@ -48,8 +48,8 @@ void Scene::drawTexture(std::shared_ptr<Entity> &entity)
     auto& texture = entity->getComponent<CTexture>();
 
     SDL_Rect fillRect{
-        (int)transform.pos.x - body.halfWidth(),
-        (int)transform.pos.y - body.halfHeight(),
+        (int)transform.cameraViewPos.x - body.halfWidth(),
+        (int)transform.cameraViewPos.y - body.halfHeight(),
         body.width(),
         body.height()
         };
@@ -67,8 +67,8 @@ void Scene::drawSpriteSet(std::shared_ptr<Entity> &entity)
     auto& spriteSet = entity->getComponent<CSpriteSet>();
 
     SDL_Rect fillRect{
-        (int)transform.pos.x - body.halfWidth(),
-        (int)transform.pos.y - body.halfHeight(),
+        (int)transform.cameraViewPos.x - body.halfWidth(),
+        (int)transform.cameraViewPos.y - body.halfHeight(),
         body.width(),
         body.height()
         };
@@ -90,7 +90,7 @@ void Scene::drawSpriteStack(std::shared_ptr<Entity>& entity)
     auto& body = entity->getComponent<CRectBody>();
 
     SDL_Rect cutterRect{ spriteStack.cutoutRect };
-    SDL_Rect fillRect{ (int)transform.pos.x - body.halfWidth(), (int)transform.pos.y - body.halfHeight(), body.width(), body.height() };
+    SDL_Rect fillRect{ (int)transform.cameraViewPos.x - body.halfWidth(), (int)transform.cameraViewPos.y - body.halfHeight(), body.width(), body.height() };
 
     for ( int i = 0; i < spriteStack.rowNumber; i++)
     {
@@ -101,6 +101,24 @@ void Scene::drawSpriteStack(std::shared_ptr<Entity>& entity)
             SDL_RenderCopyEx(m_ge->renderer(), m_ge->assetManager()->GetTexture(spriteStack.name), &cutterRect, &fillRect, transform.angle, NULL, SDL_FLIP_NONE);
             fillRect.y -= spriteStack.step;
         }
+    }
+}
+
+void Scene::drawVoxel(std::shared_ptr<Entity>& entity)
+{
+    if (!entity->hasComponent<CTransform>() || !entity->hasComponent<CRectBody>() || !entity->hasComponent<CVoxel>())
+        return;
+    auto& voxel = entity->getComponent<CVoxel>();
+    auto& transform = entity->getComponent<CTransform>();
+    auto& body = entity->getComponent<CRectBody>();
+    SDL_Rect cutterRect{ voxel.cutoutRect };
+    SDL_Rect fillRect{ (int)transform.cameraViewPos.x - body.halfWidth(), (int)transform.cameraViewPos.y - body.halfHeight(), body.width(), body.height() };
+
+    for ( int i = voxel.rowNumber - 1; i > 0; i--)
+    {
+        cutterRect.y = i * voxel.h;
+        SDL_RenderCopyEx(m_ge->renderer(), m_ge->assetManager()->GetTexture(voxel.name), &cutterRect, &fillRect, transform.angle - 90, NULL, SDL_FLIP_NONE);
+        fillRect.y -= voxel.step;
     }
 }
 
@@ -118,16 +136,28 @@ void Scene::drawAnimation(std::shared_ptr<Entity> &entity)
     auto& anim = entity->getComponent<CAnimation>().anim;
 
     SDL_Rect fillRect{
-        (int)transform.pos.x - body.halfWidth(),
-        (int)transform.pos.y - body.halfHeight(),
+        (int)transform.cameraViewPos.x - body.halfWidth(),
+        (int)transform.cameraViewPos.y - body.halfHeight(),
         body.width(),
         body.height()
         };
+        auto nextSprite = anim->getNextSpriteToDraw(m_ge->getFrameTime());
     SDL_Rect cutoutRect{
-        anim->getNextSpriteToDraw().second * spriteSet.w,
-        anim->getNextSpriteToDraw().first * spriteSet.h,
+        nextSprite.second * spriteSet.w,
+        nextSprite.first * spriteSet.h,
         spriteSet.w,
         spriteSet.h
     };
     SDL_RenderCopyEx(m_ge->renderer(), m_ge->assetManager()->GetTexture(spriteSet.name), &cutoutRect, &fillRect, transform.angle, NULL, SDL_FLIP_NONE);
+}
+
+void Scene::drawText(std::shared_ptr<Entity> &entity)
+{
+    if (!entity->hasComponent<CText>() || !entity->hasComponent<CTransform>())
+        return;
+
+    auto& transform = entity->getComponent<CTransform>();
+    auto& text = entity->getComponent<CText>();
+
+    m_ge->renderText(text.text, text.font, text.color, text.fontSize, transform.cameraViewPos);
 }
