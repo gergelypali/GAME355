@@ -4,10 +4,10 @@
 #include <map>
 #include <string>
 #include <memory>
+#include "GameEngine.h"
 
 #include "Action.h"
 
-class GameEngine;
 class EntityManager;
 class Entity;
 

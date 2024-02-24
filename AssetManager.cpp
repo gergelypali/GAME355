@@ -75,6 +75,7 @@ AssetManager::~AssetManager()
 
 void AssetManager::AddTexture(const std::string &name, const std::string &pathToFile)
 {
+    /* temp remove the code; we need to change this to be compatible with Vulkan
     SDL_Texture* textureToAdd{nullptr};
     textureToAdd = IMG_LoadTexture(m_ge->renderer(), pathToFile.c_str());
     if (!textureToAdd)
@@ -83,6 +84,7 @@ void AssetManager::AddTexture(const std::string &name, const std::string &pathTo
         return;
     }
     m_textures.insert({name, textureToAdd});
+    */
 }
 
 void AssetManager::AddAnimation(const std::string &name, int animSpeed, const std::vector<std::pair<int, int>> &sequence)

@@ -13,6 +13,7 @@
 
 class Scene;
 class AssetManager;
+class VulkanRenderer;
 
 class GameEngine
 {
@@ -29,7 +30,12 @@ private:
 
     // SDL variables
     SDL_Window* m_window{nullptr};
-    SDL_Renderer* m_renderer{nullptr};
+    SDL_Renderer* m_SDLRenderer{nullptr};
+
+    // vulkan variables
+    VulkanRenderer* m_vulkanRenderer{nullptr};
+
+    bool SDLRenderer{false};
 
     // audio part
     int m_soundVolume{0};
@@ -69,7 +75,10 @@ public:
     SDL_Window* window() { return m_window; };
     /// @brief get the renderer
     /// @return the sdl renderer object
-    SDL_Renderer* renderer() { return m_renderer; };
+    SDL_Renderer* renderer() { return m_SDLRenderer; };
+
+    VulkanRenderer* vulkanRenderer() { return m_vulkanRenderer; };
+
     /// @brief get that the game is running or not
     /// @return bool shows the game is running
     bool isRunning() { return m_running; };
