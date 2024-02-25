@@ -465,8 +465,9 @@ void DeviceHandler::createSyncObjects()
 void DeviceHandler::recordCommand(VkCommandBuffer buffer, uint32_t imageIndex)
 {
     VkCommandBufferBeginInfo beginInfo{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
-    checkVkResult(vkBeginCommandBuffer(m_commandBuffer, &beginInfo));
+    //checkVkResult(vkBeginCommandBuffer(m_commandBuffer, &beginInfo));
     /* flag
+    without any setting; so neither of these; the commandbuffer will go back to executable state
     VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT: The command buffer will be rerecorded right after executing it once.
     VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT: This is a secondary command buffer that will be entirely within a single render pass.
     VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT: The command buffer can be resubmitted while it is also already pending execution.
@@ -736,7 +737,7 @@ void DeviceHandler::recordSecondaryCommandBufferStart(VkCommandBuffer& buffer, c
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
     beginInfo.pInheritanceInfo = &inheritanceInfo;
 
-    checkVkResult(vkBeginCommandBuffer(buffer, &beginInfo));
+    checkVkResult(vkBeginCommandBuffer(buffer, &beginInfo));//this is also resetting back to recording state from executable
 
     //VkViewport
     VkViewport viewport{};
@@ -760,11 +761,4 @@ void DeviceHandler::recordSecondaryCommandBufferStart(VkCommandBuffer& buffer, c
 void DeviceHandler::recordSecondaryCommandBufferEnd(VkCommandBuffer& buffer)
 {
     checkVkResult(vkEndCommandBuffer(buffer));
-}
-
-void DeviceHandler::sendPushConstant(VkCommandBuffer &buffer, MATH::Vec4 &position, const VkPipelineLayout& pipelineLayout)
-{
-    pushConstant sendIt{};
-    sendIt.position = position;
-    vkCmdPushConstants(buffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(pushConstant), &sendIt);
 }

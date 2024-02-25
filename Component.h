@@ -7,6 +7,7 @@
 #include <memory>
 #include <SDL_ttf.h>
 #include <cstring>
+#include <vulkan/vulkan.h>
 
 class Animation;
 

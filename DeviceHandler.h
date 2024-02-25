@@ -53,18 +53,11 @@ private:
     std::vector<VkImageView> m_swapChainImageViews;
     std::vector<VkFramebuffer> m_swapChainFrameBuffers;
     VkCommandPool m_commandPool;
-    VkCommandBuffer m_commandBuffer;
     VkSemaphore m_imageAvailableSemaphore;
     VkSemaphore m_renderFinishedSemaphore;
     VkFence m_renderFinishedFence;
     uint32_t m_currentImageIndex{0};
     VkRenderPass m_renderPass{};
-
-    //temp struct for a push constant
-    struct pushConstant
-    {
-        MATH::Vec4 position;
-    };
 
     bool IsExtensionSupported(const std::vector<VkExtensionProperties>& supportedExtensions, const char* extension);
 
@@ -115,9 +108,9 @@ public:
     void recordPrimaryCommandBuffer(VkCommandBuffer& buffer, std::vector<VkCommandBuffer>& secBuffers);
     void recordSecondaryCommandBufferStart(VkCommandBuffer& buffer, const VkPipeline& pipeline);
     void recordSecondaryCommandBufferEnd(VkCommandBuffer& buffer);
-    void sendPushConstant(VkCommandBuffer& buffer, MATH::Vec4& position, const VkPipelineLayout& pipelineLayout);
 
     SDL_Window* getWindow() { return m_window; };
+    VkExtent2D &getWindowSize() { return m_info.physicalDeviceSurfaceCapabilities.currentExtent; };
     VkInstance getInstance() { return m_instance; };
     VkSurfaceKHR getSurface() { return m_surface; };
     VkDebugUtilsMessengerEXT getDebugMessenger() { return m_debugMessenger; };

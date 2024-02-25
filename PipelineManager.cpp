@@ -15,12 +15,13 @@ PipelineManager::~PipelineManager()
     for (auto& [key, value]: m_pipelines)
     { vkDestroyPipeline(m_logicalDevice, value.pipeline, nullptr); }
     for (auto& [key, value]: m_pipelineLayouts)
-    { vkDestroyPipelineLayout(m_logicalDevice, value, nullptr); }
+    { vkDestroyPipelineLayout(m_logicalDevice, value.layout, nullptr); }
 }
 
 PipelineManager::pipelineInfo &PipelineManager::addBaseGraphicsPipelineCreateInfo(const std::string &name)
 {
-    m_pipelines.insert({name, pipelineInfo{}});
+    if (m_pipelines.find(name) == m_pipelines.end())
+        m_pipelines.insert({name, pipelineInfo{}});
 
     //VkPipelineVertexInputStateCreateInfo
     m_pipelines[name].vertexInputCreateInfo.vertexBindingDescriptionCount = 0;
@@ -29,7 +30,7 @@ PipelineManager::pipelineInfo &PipelineManager::addBaseGraphicsPipelineCreateInf
     m_pipelines[name].vertexInputCreateInfo.pVertexAttributeDescriptions = nullptr;
 
     //VkPipelineInputAssemblyStateCreateInfo
-    m_pipelines[name].inputAssemblyCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+    m_pipelines[name].inputAssemblyCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     /*
     VK_PRIMITIVE_TOPOLOGY_POINT_LIST: points from vertices
     VK_PRIMITIVE_TOPOLOGY_LINE_LIST: line from every 2 vertices without reuse
@@ -136,7 +137,7 @@ void PipelineManager::createGraphicsPipeline(
     createInfo.pDynamicState = &m_pipelines[name].dynamicStateCreateInfo;
     createInfo.stageCount = (uint32_t)m_pipelines[name].shaderStages.size();
     createInfo.pStages = m_pipelines[name].shaderStages.data();
-    createInfo.layout = m_pipelineLayouts[layoutName];
+    createInfo.layout = m_pipelineLayouts[layoutName].layout;
     createInfo.renderPass = m_deviceHandler->getRenderPass();
     createInfo.subpass = 0;
     createInfo.basePipelineHandle = VK_NULL_HANDLE;
@@ -151,11 +152,36 @@ void PipelineManager::createGraphicsPipeline(
     vkDestroyShaderModule(m_logicalDevice, fragShader, nullptr);
 }
 
-void PipelineManager::addPipelineLayout(const std::string& name, const VkPipelineLayoutCreateInfo& createInfo)
+PipelineManager::pipelineLayoutInfo &PipelineManager::addVec4PushConstantPipelineLayout(const std::string &name)
 {
-    VkPipelineLayout newPipelineLayout;
-    m_checkVkResult(vkCreatePipelineLayout(m_logicalDevice, &createInfo, nullptr, &newPipelineLayout));
-    m_pipelineLayouts[name] = newPipelineLayout;
+    if (m_pipelineLayouts.find(name) == m_pipelineLayouts.end())
+        m_pipelineLayouts.insert({name, pipelineLayoutInfo{}});
+
+    m_pipelineLayouts[name].layoutCreateInfo.pushConstantRangeCount = 2;
+    // GOODTOKNOW: you need separate VkPushConstantRange-s for every shader stage
+    // you cannot ORd up the two shaders in one stageFlags
+    VkPushConstantRange pushCV;
+    pushCV.size = sizeof(vec4PC);
+    pushCV.offset = 0;
+    pushCV.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    VkPushConstantRange pushCF;
+    pushCF.size = sizeof(vec4PC);
+    pushCF.offset = sizeof(vec4PC);
+    pushCF.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    std::vector<VkPushConstantRange> range = {pushCV, pushCF};
+    m_pipelineLayouts[name].layoutCreateInfo.pPushConstantRanges = range.data();
+
+    return m_pipelineLayouts[name];
+}
+
+void PipelineManager::createPipelineLayout(const std::string& name)
+{
+    if (m_pipelineLayouts.find(name) == m_pipelineLayouts.end())
+    {
+        Logger::Instance()->logCritical("PipelineManager cannot find basePipelineLayout, so we cannot create this pipelineLayout: " + name);
+        return;
+    }
+    m_checkVkResult(vkCreatePipelineLayout(m_logicalDevice, &m_pipelineLayouts[name].layoutCreateInfo, nullptr, &m_pipelineLayouts[name].layout));
 }
 
 std::vector<char> PipelineManager::readFile(const std::string& path) {

@@ -5,19 +5,16 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 #include "Vector.h"
+#include <memory>
 
 class DeviceHandler;
 class PipelineManager;
+class Entity;
 
 class VulkanRenderer
 {
 private:
     SDL_Window* m_window;
-
-    struct pushConstant
-    {
-        MATH::Vec4 position;
-    };
 
     DeviceHandler* m_deviceHandler{nullptr};
     PipelineManager* m_pipelineManager{nullptr};
@@ -39,7 +36,7 @@ public:
     ~VulkanRenderer();
 
     void drawFrame();
-    void vulkanRenderRect();//this will just update the command buffer with the new commands
+    void vulkanRenderRect(std::shared_ptr<Entity> &entity);//this will just update the command buffer with the new commands
 };
 
 #endif

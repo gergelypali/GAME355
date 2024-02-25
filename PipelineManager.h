@@ -5,6 +5,7 @@
 #include <string>
 #include <vulkan/vulkan.h>
 #include <functional>
+#include "Vector.h"
 
 class DeviceHandler;
 
@@ -35,9 +36,15 @@ private:
         VkPipeline pipeline;
     };
 
-    // maps to strore the important DATA
+    struct pipelineLayoutInfo
+    {
+        VkPipelineLayoutCreateInfo layoutCreateInfo{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
+        VkPipelineLayout layout;
+    };
+
+    // maps to store the important DATA
     std::map<std::string, pipelineInfo> m_pipelines;
-    std::map<std::string, VkPipelineLayout> m_pipelineLayouts;
+    std::map<std::string, pipelineLayoutInfo> m_pipelineLayouts;
 
     std::vector<char> readFile(const std::string& path);
     VkShaderModule createShaderModule(const std::string& path);
@@ -53,9 +60,16 @@ public:
     PipelineManager::pipelineInfo &getGraphicsPipelineInfo(const std::string& name) { return m_pipelines[name]; };
     void createGraphicsPipeline(const std::string& name, const std::string& layoutName, const std::string& vertPath, const std::string& fragPath);
     VkPipeline &getPipeline(const std::string& name) { return m_pipelines[name].pipeline; };
-    void addPipelineLayout(const std::string& name, const VkPipelineLayoutCreateInfo& createInfo);
-    VkPipelineLayout &getPipelineLayout(const std::string& name) { return m_pipelineLayouts[name]; };
 
+    PipelineManager::pipelineLayoutInfo &addVec4PushConstantPipelineLayout(const std::string& name);
+    void createPipelineLayout(const std::string& name);
+    VkPipelineLayout &getPipelineLayout(const std::string& name) { return m_pipelineLayouts[name].layout; };
+
+    // usable pushconstant structs
+    struct vec4PC
+    {
+        MATH::Vec4 vector;
+    };
 };
 
 #endif
