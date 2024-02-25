@@ -1,6 +1,5 @@
 #include "DeviceHandler.h"
 #include <stdexcept>
-#include <iostream>
 #include <string>
 #include <set>
 #include <SDL_vulkan.h>
@@ -40,8 +39,6 @@ DeviceHandler::DeviceHandler(SDL_Window* window)
     Logger::Instance()->logVerbose("DeviceHandler createSpawchain done");
     createRenderPass();
     Logger::Instance()->logVerbose("DeviceHandler createRenderPass done");
-    createGraphicsPipeline();
-    Logger::Instance()->logVerbose("DeviceHandler createGraphicsPipeline done");
     createSwapchainFramebuffers();
     Logger::Instance()->logVerbose("DeviceHandler createSwapchainFramebuffers done");
     createCommandPool();
@@ -69,10 +66,6 @@ DeviceHandler::~DeviceHandler()
     for (auto f: m_swapChainFrameBuffers)
     { vkDestroyFramebuffer(m_logicalDevice, f, nullptr); }
     Logger::Instance()->logVerbose("DeviceHandler vkDestroyFramebuffer done");
-    vkDestroyPipeline(m_logicalDevice, m_baseGraphicsPipeline.pipeline, nullptr);
-    Logger::Instance()->logVerbose("DeviceHandler vkDestroyPipeline done");
-    vkDestroyPipelineLayout(m_logicalDevice, m_baseGraphicsPipeline.pipelineLayout, nullptr);
-    Logger::Instance()->logVerbose("DeviceHandler vkDestroyPipelineLayout done");
     vkDestroyRenderPass(m_logicalDevice, m_renderPass, nullptr);
     Logger::Instance()->logVerbose("DeviceHandler vkDestroyRenderPass done");
     for (auto v: m_swapChainImageViews)
@@ -495,7 +488,7 @@ void DeviceHandler::recordCommand(VkCommandBuffer buffer, uint32_t imageIndex)
     VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS: The render pass commands will be executed from secondary command buffers.
     */
 
-    vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_baseGraphicsPipeline.pipeline);
+    //vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_baseGraphicsPipeline.pipeline);
 
     //vkCmdSetViewport(buffer, 0, 1, &m_baseGraphicsPipeline.viewport);
     //vkCmdSetScissor(buffer, 0, 1, &m_baseGraphicsPipeline.scissor);
@@ -593,163 +586,6 @@ void DeviceHandler::createSwapchainImageViews()
 
         checkVkResult(vkCreateImageView(m_logicalDevice, &createInfo, nullptr, &m_swapChainImageViews[i]));
     }
-}
-
-std::vector<char> DeviceHandler::readFile(const std::string& path) {
-    std::ifstream file(path, std::ios::ate | std::ios::binary);
-
-    if (!file.is_open()) {
-        Logger::Instance()->logCritical("DeviceHandler cannot open shaderFile: " + path);
-    }
-
-    size_t fileSize = (size_t)file.tellg();
-    std::vector<char> buffer(fileSize);
-
-    file.seekg(0);
-    file.read(buffer.data(), fileSize);
-
-    file.close();
-
-    return buffer;
-}
-
-VkShaderModule DeviceHandler::createShaderModule(const std::string& path)
-{
-    auto shaderCode = readFile(path);
-
-    VkShaderModuleCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    createInfo.codeSize = shaderCode.size();
-    createInfo.pCode = reinterpret_cast<const uint32_t*>(shaderCode.data());
-
-    VkShaderModule res;
-    checkVkResult(vkCreateShaderModule(m_logicalDevice, &createInfo, nullptr, &res));
-
-    return res;
-}
-
-void DeviceHandler::createGraphicsPipeline()
-{
-    VkShaderModule vertShader = createShaderModule("shaders/baseShaderVert.spv");
-    VkShaderModule fragShader = createShaderModule("shaders/baseShaderFrag.spv");
-
-    VkPipelineShaderStageCreateInfo vertShaderCreateInfo{VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO};
-    vertShaderCreateInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-    vertShaderCreateInfo.module = vertShader;
-    vertShaderCreateInfo.pName = "main";
-    VkPipelineShaderStageCreateInfo fragShaderCreateInfo{VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO};
-    fragShaderCreateInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    fragShaderCreateInfo.module = fragShader;
-    fragShaderCreateInfo.pName = "main";
-
-    m_baseGraphicsPipeline.shaderStages.push_back(vertShaderCreateInfo);
-    m_baseGraphicsPipeline.shaderStages.push_back(fragShaderCreateInfo);
-
-    //VkPipelineVertexInputStateCreateInfo
-    m_baseGraphicsPipeline.vertexInputCreateInfo.vertexBindingDescriptionCount = 0;
-    m_baseGraphicsPipeline.vertexInputCreateInfo.pVertexBindingDescriptions = nullptr;
-    m_baseGraphicsPipeline.vertexInputCreateInfo.vertexAttributeDescriptionCount = 0;
-    m_baseGraphicsPipeline.vertexInputCreateInfo.pVertexAttributeDescriptions = nullptr;
-
-    //VkPipelineInputAssemblyStateCreateInfo
-    m_baseGraphicsPipeline.inputAssemblyCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
-    /*
-    VK_PRIMITIVE_TOPOLOGY_POINT_LIST: points from vertices
-    VK_PRIMITIVE_TOPOLOGY_LINE_LIST: line from every 2 vertices without reuse
-    VK_PRIMITIVE_TOPOLOGY_LINE_STRIP: the end vertex of every line is used as start vertex for the next line
-    VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST: triangle from every 3 vertices without reuse
-    VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP: the second and third vertex of every triangle are used as first two vertices of the next triangle
-    */
-    m_baseGraphicsPipeline.inputAssemblyCreateInfo.primitiveRestartEnable = VK_FALSE;
-
-    //VkPipelineDynamicStateCreateInfo
-    m_baseGraphicsPipeline.dynamicStates.push_back(VK_DYNAMIC_STATE_VIEWPORT);// <- can use these later
-    m_baseGraphicsPipeline.dynamicStates.push_back(VK_DYNAMIC_STATE_SCISSOR);
-    m_baseGraphicsPipeline.dynamicStateCreateInfo.dynamicStateCount =(uint32_t)m_baseGraphicsPipeline.dynamicStates.size();
-    m_baseGraphicsPipeline.dynamicStateCreateInfo.pDynamicStates = m_baseGraphicsPipeline.dynamicStates.data();
-
-    //VkPipelineViewportStateCreateInfo
-    m_baseGraphicsPipeline.viewportStateCreateInfo.viewportCount = 1;
-    //m_baseGraphicsPipeline.viewportStateCreateInfo.pViewports = &m_baseGraphicsPipeline.viewport;//comment out if we are using dynamic
-    m_baseGraphicsPipeline.viewportStateCreateInfo.scissorCount = 1;
-    //m_baseGraphicsPipeline.viewportStateCreateInfo.pScissors = &m_baseGraphicsPipeline.scissor;//comment out if we are using dynamic
-
-    //VkPipelineRasterizationStateCreateInfo
-    m_baseGraphicsPipeline.rasterizerCreateInfo.depthClampEnable = VK_FALSE;
-    m_baseGraphicsPipeline.rasterizerCreateInfo.rasterizerDiscardEnable = VK_FALSE;
-    m_baseGraphicsPipeline.rasterizerCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
-    /*
-    VK_POLYGON_MODE_FILL: fill the area of the polygon with fragments
-    VK_POLYGON_MODE_LINE: polygon edges are drawn as lines
-    VK_POLYGON_MODE_POINT: polygon vertices are drawn as points
-    */
-    m_baseGraphicsPipeline.rasterizerCreateInfo.lineWidth = 1.0f;
-    m_baseGraphicsPipeline.rasterizerCreateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
-    m_baseGraphicsPipeline.rasterizerCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;//this can change how I define the vertex coordinates in the vert shader
-    m_baseGraphicsPipeline.rasterizerCreateInfo.depthBiasEnable = VK_FALSE;
-
-    //VkPipelineMultisampleStateCreateInfo
-    m_baseGraphicsPipeline.multisamplingCreateInfo.sampleShadingEnable = VK_FALSE;
-    m_baseGraphicsPipeline.multisamplingCreateInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-    // we dont need this now
-    /*
-    //VkPipelineDepthStencilStateCreateInfo
-    m_baseGraphicsPipeline.depthStencilCreateInfo.depthTestEnable = VK_TRUE;
-    m_baseGraphicsPipeline.depthStencilCreateInfo.depthWriteEnable = VK_TRUE;
-    m_baseGraphicsPipeline.depthStencilCreateInfo.depthCompareOp = VK_COMPARE_OP_LESS;
-    m_baseGraphicsPipeline.depthStencilCreateInfo.depthBoundsTestEnable = VK_FALSE;
-    m_baseGraphicsPipeline.depthStencilCreateInfo.stencilTestEnable = VK_FALSE;
-    */
-
-    //VkPipelineColorBlendAttachmentState
-    m_baseGraphicsPipeline.colorBlendAttachmentCreateInfo.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    m_baseGraphicsPipeline.colorBlendAttachmentCreateInfo.blendEnable = VK_FALSE;
-
-    //VkPipelineColorBlendStateCreateInfo
-    m_baseGraphicsPipeline.colorBlendingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-    m_baseGraphicsPipeline.colorBlendingCreateInfo.logicOpEnable = VK_FALSE;
-    m_baseGraphicsPipeline.colorBlendingCreateInfo.logicOp = VK_LOGIC_OP_COPY;
-    m_baseGraphicsPipeline.colorBlendingCreateInfo.attachmentCount = 1;
-    m_baseGraphicsPipeline.colorBlendingCreateInfo.pAttachments = &m_baseGraphicsPipeline.colorBlendAttachmentCreateInfo;
-    m_baseGraphicsPipeline.colorBlendingCreateInfo.blendConstants[0] = 0.0f;
-    m_baseGraphicsPipeline.colorBlendingCreateInfo.blendConstants[1] = 0.0f;
-    m_baseGraphicsPipeline.colorBlendingCreateInfo.blendConstants[2] = 0.0f;
-    m_baseGraphicsPipeline.colorBlendingCreateInfo.blendConstants[3] = 0.0f;
-
-    //VkPipelineLayoutCreateInfo
-    m_baseGraphicsPipeline.pipelineLayoutInfo.setLayoutCount = 0;
-    m_baseGraphicsPipeline.pipelineLayoutInfo.pushConstantRangeCount = 1;
-    //pushconstant
-    VkPushConstantRange pushC;
-    pushC.size = sizeof(pushConstant);
-    pushC.offset = 0;
-    pushC.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    m_baseGraphicsPipeline.pipelineLayoutInfo.pPushConstantRanges = &pushC;
-
-    //VkPipelineLayout
-    checkVkResult(vkCreatePipelineLayout(m_logicalDevice, &m_baseGraphicsPipeline.pipelineLayoutInfo, nullptr, &m_baseGraphicsPipeline.pipelineLayout));
-
-    //VkGraphicsPipelineCreateInfo
-    m_baseGraphicsPipeline.pipelineInfo.stageCount = (uint32_t)m_baseGraphicsPipeline.shaderStages.size();
-    m_baseGraphicsPipeline.pipelineInfo.pStages = m_baseGraphicsPipeline.shaderStages.data();
-    m_baseGraphicsPipeline.pipelineInfo.pVertexInputState = &m_baseGraphicsPipeline.vertexInputCreateInfo;
-    m_baseGraphicsPipeline.pipelineInfo.pInputAssemblyState = &m_baseGraphicsPipeline.inputAssemblyCreateInfo;
-    m_baseGraphicsPipeline.pipelineInfo.pViewportState = &m_baseGraphicsPipeline.viewportStateCreateInfo;
-    m_baseGraphicsPipeline.pipelineInfo.pRasterizationState = &m_baseGraphicsPipeline.rasterizerCreateInfo;
-    m_baseGraphicsPipeline.pipelineInfo.pMultisampleState = &m_baseGraphicsPipeline.multisamplingCreateInfo;
-    //m_baseGraphicsPipeline.pipelineInfo.pDepthStencilState = &m_baseGraphicsPipeline.depthStencilCreateInfo;//dont need this right now
-    m_baseGraphicsPipeline.pipelineInfo.pColorBlendState = &m_baseGraphicsPipeline.colorBlendingCreateInfo;
-    m_baseGraphicsPipeline.pipelineInfo.pDynamicState = &m_baseGraphicsPipeline.dynamicStateCreateInfo;
-    m_baseGraphicsPipeline.pipelineInfo.layout = m_baseGraphicsPipeline.pipelineLayout;
-    m_baseGraphicsPipeline.pipelineInfo.renderPass = m_renderPass;
-    m_baseGraphicsPipeline.pipelineInfo.subpass = 0;
-    m_baseGraphicsPipeline.pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-
-    checkVkResult(vkCreateGraphicsPipelines(m_logicalDevice, VK_NULL_HANDLE, 1, &m_baseGraphicsPipeline.pipelineInfo, nullptr, &m_baseGraphicsPipeline.pipeline));
-
-    vkDestroyShaderModule(m_logicalDevice, vertShader, nullptr);
-    vkDestroyShaderModule(m_logicalDevice, fragShader, nullptr);
 }
 
 void DeviceHandler::createRenderPass()
@@ -889,7 +725,7 @@ void DeviceHandler::recordPrimaryCommandBuffer(
     checkVkResult(vkEndCommandBuffer(buffer));
 }
 
-void DeviceHandler::recordSecondaryCommandBufferStart(VkCommandBuffer& buffer)
+void DeviceHandler::recordSecondaryCommandBufferStart(VkCommandBuffer& buffer, const VkPipeline& pipeline)
 {
     VkCommandBufferInheritanceInfo inheritanceInfo{VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO};
     inheritanceInfo.renderPass = m_renderPass;
@@ -918,7 +754,7 @@ void DeviceHandler::recordSecondaryCommandBufferStart(VkCommandBuffer& buffer)
     scissor.extent = m_info.physicalDeviceSurfaceCapabilities.currentExtent;
     vkCmdSetScissor(buffer, 0, 1, &scissor);
 
-    vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_baseGraphicsPipeline.pipeline);
+    vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 }
 
 void DeviceHandler::recordSecondaryCommandBufferEnd(VkCommandBuffer& buffer)
@@ -926,9 +762,9 @@ void DeviceHandler::recordSecondaryCommandBufferEnd(VkCommandBuffer& buffer)
     checkVkResult(vkEndCommandBuffer(buffer));
 }
 
-void DeviceHandler::sendPushConstant(VkCommandBuffer &buffer, MATH::Vec4 &position)
+void DeviceHandler::sendPushConstant(VkCommandBuffer &buffer, MATH::Vec4 &position, const VkPipelineLayout& pipelineLayout)
 {
     pushConstant sendIt{};
     sendIt.position = position;
-    vkCmdPushConstants(buffer, m_baseGraphicsPipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(pushConstant), &sendIt);
+    vkCmdPushConstants(buffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(pushConstant), &sendIt);
 }

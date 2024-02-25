@@ -37,27 +37,7 @@ private:
         std::vector<VkPresentModeKHR> physicalDevicePresentModes;
     };
 
-    struct pipelineInfo
-    {
-        std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
-        VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo{VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
-        VkPipelineInputAssemblyStateCreateInfo inputAssemblyCreateInfo{VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO};
-        VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo{VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO};
-        std::vector<VkDynamicState> dynamicStates;
-        VkPipelineViewportStateCreateInfo viewportStateCreateInfo{VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO};
-        VkPipelineRasterizationStateCreateInfo rasterizerCreateInfo{VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO};
-        VkPipelineMultisampleStateCreateInfo multisamplingCreateInfo{VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO};
-        VkPipelineDepthStencilStateCreateInfo depthStencilCreateInfo{VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO};
-        VkPipelineColorBlendAttachmentState colorBlendAttachmentCreateInfo{};
-        VkPipelineColorBlendStateCreateInfo colorBlendingCreateInfo{VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO};
-        VkPipelineLayoutCreateInfo pipelineLayoutInfo{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
-        VkPipelineLayout pipelineLayout{};
-        VkGraphicsPipelineCreateInfo pipelineInfo{VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
-        VkPipeline pipeline;
-    };
-
     gpuInfo m_info{};
-    pipelineInfo m_baseGraphicsPipeline{};
 
     const int m_concurrentFrames{2};//not used yet; maybe later
 
@@ -86,7 +66,6 @@ private:
         MATH::Vec4 position;
     };
 
-    void checkVkResult(const VkResult& res);
     bool IsExtensionSupported(const std::vector<VkExtensionProperties>& supportedExtensions, const char* extension);
 
     void createInstance();
@@ -95,9 +74,6 @@ private:
     void createLogicalDevice();
     void createSwapchain();
     void createSwapchainImageViews();
-    std::vector<char> readFile(const std::string& path);
-    VkShaderModule createShaderModule(const std::string& path);
-    void createGraphicsPipeline();
     void createRenderPass();
     void createSwapchainFramebuffers();
     void createCommandPool();
@@ -131,22 +107,25 @@ public:
     DeviceHandler(SDL_Window* window);
     ~DeviceHandler();
 
+    void checkVkResult(const VkResult& res);
+
     void drawFrame(VkCommandBuffer& buffer);
     void createCommandBuffer(VkCommandBuffer& buffer, VkCommandBufferLevel level);
     void createCommandBuffer(std::vector<VkCommandBuffer>& buffer, VkCommandBufferLevel level);
     void recordPrimaryCommandBuffer(VkCommandBuffer& buffer, std::vector<VkCommandBuffer>& secBuffers);
-    void recordSecondaryCommandBufferStart(VkCommandBuffer& buffer);
+    void recordSecondaryCommandBufferStart(VkCommandBuffer& buffer, const VkPipeline& pipeline);
     void recordSecondaryCommandBufferEnd(VkCommandBuffer& buffer);
-    void sendPushConstant(VkCommandBuffer& buffer, MATH::Vec4& position);
+    void sendPushConstant(VkCommandBuffer& buffer, MATH::Vec4& position, const VkPipelineLayout& pipelineLayout);
 
     SDL_Window* getWindow() { return m_window; };
     VkInstance getInstance() { return m_instance; };
     VkSurfaceKHR getSurface() { return m_surface; };
     VkDebugUtilsMessengerEXT getDebugMessenger() { return m_debugMessenger; };
     VkPhysicalDevice getPhysicalDevice() { return m_physicalDevice; };
-    VkDevice getLogicalDevice() { return m_logicalDevice; };
+    VkDevice &getLogicalDevice() { return m_logicalDevice; };
     VkQueue getGraphicsQueue() { return m_graphicsQueue; };
     VkQueue getPresentQueue() { return m_presentQueue; };
+    VkRenderPass &getRenderPass() { return m_renderPass; };
 };
 
 #endif

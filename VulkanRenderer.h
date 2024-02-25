@@ -4,15 +4,23 @@
 #include <SDL.h>
 #include <vulkan/vulkan.h>
 #include <vector>
+#include "Vector.h"
 
 class DeviceHandler;
+class PipelineManager;
 
 class VulkanRenderer
 {
 private:
     SDL_Window* m_window;
 
+    struct pushConstant
+    {
+        MATH::Vec4 position;
+    };
+
     DeviceHandler* m_deviceHandler{nullptr};
+    PipelineManager* m_pipelineManager{nullptr};
 
     VkCommandBuffer m_primaryCommandBuffer;
     std::vector<VkCommandBuffer> m_secondaryCommandBuffer;
