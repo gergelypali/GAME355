@@ -39,7 +39,6 @@ private:
 
     // systems
     void sMovement();
-    void sRender() override;
     void sDoAction(const Action& action) override;
     void sPhysics();
     void sCheckGameState();

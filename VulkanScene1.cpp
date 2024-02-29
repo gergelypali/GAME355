@@ -1,13 +1,10 @@
 #include "VulkanScene1.h"
-#include "VulkanRenderer.h"
 #include "Entity.h"
 #include "EntityManager.h"
 #include "Logger.h"
 
 void VulkanScene1::init()
 {
-    m_em = std::make_shared<EntityManager>();
-
     registerAction(SDL_SCANCODE_W, "UP");
     registerAction(SDL_SCANCODE_S, "DOWN");
     registerAction(SDL_SCANCODE_A, "LEFT");
@@ -33,12 +30,6 @@ void VulkanScene1::update()
     sMovement();
     sRender();
     m_currentFrame++;
-}
-
-void VulkanScene1::sRender()
-{
-    m_ge->vulkanRenderer()->vulkanRenderRect(m_player);
-    m_ge->vulkanRenderer()->drawFrame();// this will be the last call after I filled up the commandBuffer
 }
 
 void VulkanScene1::sDoAction(const Action& action)

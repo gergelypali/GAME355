@@ -7,6 +7,12 @@
 #include <functional>
 #include "Vector.h"
 
+#include "Structs.h"
+
+using pipelineInfo = PIPELINE::pipelineInfo;
+using pipelineLayoutInfo = PIPELINE::pipelineLayoutInfo;
+using vec4PC = BUFFER::vec4PushConstant;
+
 class DeviceHandler;
 
 class PipelineManager
@@ -16,32 +22,6 @@ private:
     VkDevice m_logicalDevice;
     std::function<void(const VkResult&)> m_checkVkResult;
 
-    struct pipelineInfo
-    {
-        std::string vertShaderPath{""};
-        std::string fragShaderPath{""};
-        std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
-        VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo{VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
-        VkPipelineInputAssemblyStateCreateInfo inputAssemblyCreateInfo{VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO};
-        VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo{VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO};
-        std::vector<VkDynamicState> dynamicStates;
-        VkPipelineViewportStateCreateInfo viewportStateCreateInfo{VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO};
-        VkPipelineRasterizationStateCreateInfo rasterizerCreateInfo{VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO};
-        VkPipelineMultisampleStateCreateInfo multisamplingCreateInfo{VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO};
-        VkPipelineDepthStencilStateCreateInfo depthStencilCreateInfo{VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO};
-        VkPipelineColorBlendAttachmentState colorBlendAttachmentCreateInfo{VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO};
-        VkPipelineColorBlendStateCreateInfo colorBlendingCreateInfo{VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO};
-        VkPipelineLayout pipelineLayout{};
-        VkGraphicsPipelineCreateInfo pipelineInfo{VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
-        VkPipeline pipeline;
-    };
-
-    struct pipelineLayoutInfo
-    {
-        VkPipelineLayoutCreateInfo layoutCreateInfo{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
-        VkPipelineLayout layout;
-    };
-
     // maps to store the important DATA
     std::map<std::string, pipelineInfo> m_pipelines;
     std::map<std::string, pipelineLayoutInfo> m_pipelineLayouts;
@@ -49,27 +29,56 @@ private:
     std::vector<char> readFile(const std::string& path);
     VkShaderModule createShaderModule(const std::string& path);
 
+    struct descriptorData
+    {
+        VkDescriptorSetLayout setLayout;
+        VkDescriptorSet set;
+        std::vector<VkBuffer> buffer;
+        std::vector<VkDeviceMemory> bufferMemory;
+        std::vector<void*> bufferMemoryAddress;
+
+    };
+    struct descriptorCreateInfo
+    {
+        VkDescriptorType type;
+        VkShaderStageFlags shaderStageFlags;
+        VkDeviceSize bufferSize;
+        uint8_t numberOfMaxSets{0};
+    };
+
+    std::map<std::string, std::vector<descriptorCreateInfo>> m_descriptorCreateInfos;
+    std::map<std::string, descriptorData> m_descriptorDatas;
+    VkDescriptorPool m_descriptorPool;
+
+    void initDescriptorConfig();
+
 public:
+
+    struct uboData
+    {
+        MATH::Vec4 vector[1000];
+    };
 
     PipelineManager() = delete;
     PipelineManager(DeviceHandler* de);
     ~PipelineManager();
 
     // can add more type of pipeline: compute for example
-    PipelineManager::pipelineInfo &addBaseGraphicsPipelineCreateInfo(const std::string& name);
-    PipelineManager::pipelineInfo &getGraphicsPipelineInfo(const std::string& name) { return m_pipelines[name]; };
-    void createGraphicsPipeline(const std::string& name, const std::string& layoutName, const std::string& vertPath, const std::string& fragPath);
+    // pipeline part
+    pipelineInfo &addBaseGraphicsPipelineCreateInfo(const std::string& name);
+    void createGraphicsPipeline(const std::string& name, const std::string& pipelineLayoutName, const std::string& vertPath, const std::string& fragPath);
+    pipelineInfo &getGraphicsPipelineInfo(const std::string& name) { return m_pipelines[name]; };
     VkPipeline &getPipeline(const std::string& name) { return m_pipelines[name].pipeline; };
 
-    PipelineManager::pipelineLayoutInfo &addVec4PushConstantPipelineLayout(const std::string& name);
+    // pipelinelayout part
+    pipelineLayoutInfo &addVec4PushConstantPipelineLayout(const std::string& name);
+    pipelineLayoutInfo &addDescriptorSetToPipelineLayout(const std::string &descriptorSetName, const std::string &pipelineLayoutName);
     void createPipelineLayout(const std::string& name);
     VkPipelineLayout &getPipelineLayout(const std::string& name) { return m_pipelineLayouts[name].layout; };
 
-    // usable pushconstant structs
-    struct vec4PC
-    {
-        MATH::Vec4 vector;
-    };
+    // descriptorSet part
+    VkDescriptorSet &getDescriptorSet(const std::string& name) { return m_descriptorDatas[name].set; };
+    void updateUbo(uboData &newUbo, const std::string& name, uint32_t binding);
 };
 
 #endif

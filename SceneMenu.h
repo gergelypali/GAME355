@@ -21,7 +21,6 @@ private:
 
     // systems
     void sMovement();
-    void sRender() override;
     void sDoAction(const Action& action) override;
 
     // scene specific methods

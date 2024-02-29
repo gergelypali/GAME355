@@ -88,6 +88,7 @@ private:
 
     // physical device helpers
     bool isDeviceGoodForUs(const VkPhysicalDevice& device);
+    uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
 
 public:
@@ -108,6 +109,8 @@ public:
     void recordPrimaryCommandBuffer(VkCommandBuffer& buffer, std::vector<VkCommandBuffer>& secBuffers);
     void recordSecondaryCommandBufferStart(VkCommandBuffer& buffer, const VkPipeline& pipeline);
     void recordSecondaryCommandBufferEnd(VkCommandBuffer& buffer);
+
+    void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 
     SDL_Window* getWindow() { return m_window; };
     VkExtent2D &getWindowSize() { return m_info.physicalDeviceSurfaceCapabilities.currentExtent; };

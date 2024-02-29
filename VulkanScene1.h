@@ -9,13 +9,11 @@ class VulkanScene1: public Scene
 {
 private:
     std::shared_ptr<Entity> m_player{nullptr};
-    std::shared_ptr<EntityManager> m_em{nullptr};
 
     void init() override;
     void endScene() override;
 
     // systems
-    void sRender() override;
     void sDoAction(const Action& action) override;
 
     void sMovement();

@@ -56,53 +56,6 @@ void SceneOne::update()
     m_currentFrame++;
 }
 
-void SceneOne::sRender()
-{
-    SDL_SetRenderDrawColor(m_ge->renderer(), 0xFF, 0xFF, 0x0, 0x0);
-    SDL_RenderClear(m_ge->renderer());
-    SDL_SetRenderDrawBlendMode(m_ge->renderer(), SDL_BLENDMODE_BLEND);
-
-    for (auto& entity: m_em->getEntities())
-    {
-        if (entity->hasComponent<CTransform>())
-        {
-            if (entity->hasComponent<CText>())
-            {
-                drawText(entity);
-            }
-            if (entity->hasComponent<CRectBody>())
-            {
-                if (entity->hasComponent<CTexture>())
-                {
-                    drawTexture(entity);
-                }
-                else if (entity->hasComponent<CSpriteSet>())
-                {
-                    if (entity->hasComponent<CAnimation>())
-                        drawAnimation(entity);
-                    else
-                        drawSpriteSet(entity);
-                }
-                else if (entity->hasComponent<CSpriteStack>())
-                {
-                    drawSpriteStack(entity);
-                }
-                else if (entity->hasComponent<CVoxel>())
-                {
-                    drawVoxel(entity);
-                }
-                else
-                {
-                    drawRect(entity);
-                }
-            }
-        }
-    }
-
-    // render everything at the end of each render loop
-    SDL_RenderPresent(m_ge->renderer());
-}
-
 void SceneOne::sDoAction(const Action& action)
 {
     // basic ARPG movement

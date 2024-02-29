@@ -61,6 +61,8 @@ public:
     GameEngine(){ init(); };
     ~GameEngine(){ quit(); };
 
+    bool isSDL() { return SDLRenderer; };
+
     // main public methods
     /// @brief start and run the main loop continuously
     void run();

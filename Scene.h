@@ -24,11 +24,11 @@ protected:
 
 public:
     Scene() = delete;
-    Scene(GameEngine* ge): m_ge(ge) {};
+    Scene(GameEngine* ge);
     virtual ~Scene() {};
     virtual void update() = 0;
     virtual void sDoAction(const Action& action) = 0;
-    virtual void sRender() = 0;
+    void sRender();
 
     void doAction(Action action);
     void registerAction(int i, const std::string& name);

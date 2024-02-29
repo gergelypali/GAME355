@@ -6,6 +6,7 @@
 #include <vector>
 #include "Vector.h"
 #include <memory>
+#include "PipelineManager.h"
 
 class DeviceHandler;
 class PipelineManager;
@@ -15,12 +16,21 @@ class VulkanRenderer
 {
 private:
     SDL_Window* m_window;
+    uint32_t m_windowX{0};
+    uint32_t m_windowY{0};
+
+    VkBuffer m_largeUboBuffer;
+    VkDeviceMemory m_largeUboMemory;
+    void* m_largeUboMappedMemory;
 
     DeviceHandler* m_deviceHandler{nullptr};
     PipelineManager* m_pipelineManager{nullptr};
 
     VkCommandBuffer m_primaryCommandBuffer;
     std::vector<VkCommandBuffer> m_secondaryCommandBuffer;
+
+    size_t m_rectangleCount{0};
+    PipelineManager::uboData m_rectangleUbo{};
 
     void createPrimaryCommandBuffer(VkCommandBuffer& buffer);
     void createSecondaryCommandBuffer(std::vector<VkCommandBuffer>& buffer);

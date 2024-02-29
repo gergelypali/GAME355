@@ -4,6 +4,14 @@
 #include "GameEngine.h"
 #include "AssetManager.h"
 #include "Animation.h"
+#include "EntityManager.h"
+#include "VulkanRenderer.h"
+
+Scene::Scene(GameEngine* ge)
+    : m_ge(ge)
+{
+    m_em = std::make_shared<EntityManager>();
+}
 
 void Scene::registerAction(int i, const std::string& name)
 {
@@ -15,6 +23,63 @@ void Scene::doAction(Action action)
     sDoAction(action);
 }
 
+void Scene::sRender()
+{
+    if (m_ge->isSDL())
+    {
+        SDL_SetRenderDrawColor(m_ge->renderer(), 0xFF, 0xFF, 0x0, 0x0);
+        SDL_RenderClear(m_ge->renderer());
+        SDL_SetRenderDrawBlendMode(m_ge->renderer(), SDL_BLENDMODE_BLEND);
+    }
+
+    for (auto& entity: m_em->getEntities())
+    {
+        if (entity->hasComponent<CTransform>())
+        {
+            if (entity->hasComponent<CText>())
+            {
+                drawText(entity);
+            }
+            if (entity->hasComponent<CRectBody>())
+            {
+                if (entity->hasComponent<CTexture>())
+                {
+                    drawTexture(entity);
+                }
+                else if (entity->hasComponent<CSpriteSet>())
+                {
+                    if (entity->hasComponent<CAnimation>())
+                        drawAnimation(entity);
+                    else
+                        drawSpriteSet(entity);
+                }
+                else if (entity->hasComponent<CSpriteStack>())
+                {
+                    drawSpriteStack(entity);
+                }
+                else if (entity->hasComponent<CVoxel>())
+                {
+                    drawVoxel(entity);
+                }
+                else
+                {
+                    drawRect(entity);
+                }
+            }
+        }
+    }
+
+    // render everything at the end of each render loop
+    if (m_ge->isSDL())
+    {
+        SDL_RenderPresent(m_ge->renderer());
+    }
+    else
+    {
+        m_ge->vulkanRenderer()->drawFrame();
+    }
+}
+
 void Scene::drawRect(std::shared_ptr<Entity> &entity)
 {
     if (!entity->hasComponent<CTransform>() || !entity->hasComponent<CRectBody>())
@@ -22,21 +87,28 @@ void Scene::drawRect(std::shared_ptr<Entity> &entity)
     auto& transform = entity->getComponent<CTransform>();
     auto& body = entity->getComponent<CRectBody>();
 
-    SDL_Rect fillRect{
-        (int)transform.cameraViewPos.x - body.halfWidth(),
-        (int)transform.cameraViewPos.y - body.halfHeight(),
-        body.width(),
-        body.height()
-    };
+    if (m_ge->isSDL())
+    {
+        SDL_Rect fillRect{
+            (int)transform.cameraViewPos.x - body.halfWidth(),
+            (int)transform.cameraViewPos.y - body.halfHeight(),
+            body.width(),
+            body.height()
+        };
 
-    SDL_SetRenderDrawColor(
-        m_ge->renderer(),
-        body.color().x,//r
-        body.color().y,//g
-        body.color().z,//b
-        body.color().w);//alpha
+        SDL_SetRenderDrawColor(
+            m_ge->renderer(),
+            body.color().x,//r
+            body.color().y,//g
+            body.color().z,//b
+            body.color().w);//alpha
 
-    SDL_RenderFillRect( m_ge->renderer(), &fillRect );
+        SDL_RenderFillRect( m_ge->renderer(), &fillRect );
+    }
+    else
+    {
+        m_ge->vulkanRenderer()->vulkanRenderRect(entity);
+    }
 }
 
 void Scene::drawTexture(std::shared_ptr<Entity> &entity)

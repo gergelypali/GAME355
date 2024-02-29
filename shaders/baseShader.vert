@@ -2,6 +2,10 @@
 
 layout(location = 0) out vec3 fragColor;
 
+layout(binding = 0) uniform uboData {
+    vec4 vector[1000];
+} ubo;
+
 layout(push_constant) uniform constants {
     vec4 position;
 } PushConstants;
@@ -25,6 +29,6 @@ vec3 colors[6] = vec3[](
 );
 
 void main() {
-    gl_Position = vec4(PushConstants.position.xy + vertexPositions[gl_VertexIndex], 0.0, 1.0);
+    gl_Position = vec4(ubo.vector[gl_InstanceIndex].xy + vertexPositions[gl_VertexIndex], 0.0, 1.0);
     fragColor = colors[gl_VertexIndex];
 }
