@@ -107,7 +107,9 @@ void Scene::drawRect(std::shared_ptr<Entity> &entity)
     }
     else
     {
-        m_ge->vulkanRenderer()->vulkanRenderRect(entity);
+        MATH::Vec4 positionAndSize{transform.pos.x, transform.pos.y, body.halfWidth(), body.halfHeight()};
+
+        m_ge->vulkanRenderer()->vulkanRenderRect(positionAndSize, body.color());
     }
 }
 

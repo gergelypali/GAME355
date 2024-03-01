@@ -9,15 +9,16 @@ PipelineManager::PipelineManager(DeviceHandler *de)
     m_logicalDevice = m_deviceHandler->getLogicalDevice();
     m_checkVkResult = std::bind(&DeviceHandler::checkVkResult, m_deviceHandler, std::placeholders::_1);
 
-    std::vector<descriptorCreateInfo> newVector;
-    descriptorCreateInfo new1{};
-    new1.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    new1.bufferSize = sizeof(uboData);
-    new1.numberOfMaxSets = 5;
-    new1.shaderStageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    newVector.push_back(new1);
+    // descriptor for the ubo for rectangle rendering
+    std::vector<descriptorCreateInfo> rectangleUboCreateInfo;
+    descriptorCreateInfo uboBinding0{};
+    uboBinding0.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    uboBinding0.bufferSize = sizeof(rectangleUboData);
+    uboBinding0.numberOfMaxSets = 5;
+    uboBinding0.shaderStageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    rectangleUboCreateInfo.push_back(uboBinding0);
+    m_descriptorCreateInfos.insert({"rectangleUBO", rectangleUboCreateInfo});
 
-    m_descriptorCreateInfos.insert({"baseUBO", newVector});
     initDescriptorConfig();
 }
 
@@ -348,7 +349,7 @@ void PipelineManager::createPipelineLayout(const std::string& name)
     Logger::Instance()->logError("createPipelineLayout: 2");
 }
 
-void PipelineManager::updateUbo(uboData &newUbo, const std::string& name, uint32_t binding)
+void PipelineManager::updateRectangleUbo(rectangleUboData &newUbo, const std::string& name, uint32_t binding)
 {
     memcpy(m_descriptorDatas[name].bufferMemoryAddress[binding], &newUbo, sizeof(newUbo));
 }

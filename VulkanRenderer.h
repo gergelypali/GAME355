@@ -19,10 +19,6 @@ private:
     uint32_t m_windowX{0};
     uint32_t m_windowY{0};
 
-    VkBuffer m_largeUboBuffer;
-    VkDeviceMemory m_largeUboMemory;
-    void* m_largeUboMappedMemory;
-
     DeviceHandler* m_deviceHandler{nullptr};
     PipelineManager* m_pipelineManager{nullptr};
 
@@ -30,7 +26,7 @@ private:
     std::vector<VkCommandBuffer> m_secondaryCommandBuffer;
 
     size_t m_rectangleCount{0};
-    PipelineManager::uboData m_rectangleUbo{};
+    PipelineManager::rectangleUboData m_rectangleUbo{};
 
     void createPrimaryCommandBuffer(VkCommandBuffer& buffer);
     void createSecondaryCommandBuffer(std::vector<VkCommandBuffer>& buffer);
@@ -46,7 +42,7 @@ public:
     ~VulkanRenderer();
 
     void drawFrame();
-    void vulkanRenderRect(std::shared_ptr<Entity> &entity);//this will just update the command buffer with the new commands
+    void vulkanRenderRect(const MATH::Vec4& positionAndSize, const MATH::Vec4& color);//this will just update the command buffer with the new commands
 };
 
 #endif

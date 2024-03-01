@@ -2,6 +2,7 @@
 #include "DeviceHandler.h"
 #include "Entity.h"
 #include <math.h>
+#include "Logger.h"
 
 VulkanRenderer::VulkanRenderer(SDL_Window* window)
     : m_window(window)
@@ -12,11 +13,10 @@ VulkanRenderer::VulkanRenderer(SDL_Window* window)
     m_windowX = m_deviceHandler->getWindowSize().width / 2;
     m_windowY = m_deviceHandler->getWindowSize().height / 2;
 
-    m_pipelineManager->addBaseGraphicsPipelineCreateInfo("base");
-    //m_pipelineManager->addVec4PushConstantPipelineLayout("baseLayout");
-    m_pipelineManager->addDescriptorSetToPipelineLayout("baseUBO", "baseLayout");
-    m_pipelineManager->createPipelineLayout("baseLayout");
-    m_pipelineManager->createGraphicsPipeline("base", "baseLayout", "shaders/baseShaderVert.spv", "shaders/baseShaderFrag.spv");
+    m_pipelineManager->addBaseGraphicsPipelineCreateInfo("rectanglePipeline");
+    m_pipelineManager->addDescriptorSetToPipelineLayout("rectangleUBO", "rectanglePipelineLayout");
+    m_pipelineManager->createPipelineLayout("rectanglePipelineLayout");
+    m_pipelineManager->createGraphicsPipeline("rectanglePipeline", "rectanglePipelineLayout", "shaders/rectangleShaderVert.spv", "shaders/rectangleShaderFrag.spv");
 
     createPrimaryCommandBuffer(m_primaryCommandBuffer);
     m_secondaryCommandBuffer.resize(1);
@@ -25,9 +25,6 @@ VulkanRenderer::VulkanRenderer(SDL_Window* window)
 
 VulkanRenderer::~VulkanRenderer()
 {
-    vkUnmapMemory(m_deviceHandler->getLogicalDevice(), m_largeUboMemory);
-    vkDestroyBuffer(m_deviceHandler->getLogicalDevice(), m_largeUboBuffer, VK_NULL_HANDLE);
-    vkFreeMemory(m_deviceHandler->getLogicalDevice(), m_largeUboMemory, VK_NULL_HANDLE);
     delete(m_pipelineManager);
     delete(m_deviceHandler);
 }
@@ -44,32 +41,32 @@ void VulkanRenderer::createSecondaryCommandBuffer(std::vector<VkCommandBuffer>& 
 
 void VulkanRenderer::drawFrame()
 {
+    // update the UBOs to transfer the new data to the shaders
+    m_pipelineManager->updateRectangleUbo(m_rectangleUbo, "rectangleUBO", 0);
+
+    // TODO: we need to recreate them because we have to provide the framebuffer that is used
+    // and it is changing per frame
+    // if I need more optimalization I can just create this once hopefully, but now I just left this here
     // create a secondary commandbuffer for all of the rectangles we need to draw
-    m_pipelineManager->updateUbo(m_rectangleUbo, "baseUBO", 0);
-    vkResetCommandBuffer(m_secondaryCommandBuffer[0], 0);
-    m_deviceHandler->recordSecondaryCommandBufferStart(m_secondaryCommandBuffer[0], m_pipelineManager->getPipeline("base"));
-    vkCmdBindDescriptorSets(m_secondaryCommandBuffer[0], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineManager->getPipelineLayout("baseLayout"), 0, 1, &m_pipelineManager->getDescriptorSet("baseUBO"), 0, VK_NULL_HANDLE);
+    m_deviceHandler->recordSecondaryCommandBufferStart(m_secondaryCommandBuffer[0], m_pipelineManager->getPipeline("rectanglePipeline"));
+    vkCmdBindDescriptorSets(m_secondaryCommandBuffer[0], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineManager->getPipelineLayout("rectanglePipelineLayout"), 0, 1, &m_pipelineManager->getDescriptorSet("rectangleUBO"), 0, VK_NULL_HANDLE);
     vkCmdDraw(m_secondaryCommandBuffer[0], 6, m_rectangleCount, 0, 0);
     m_deviceHandler->recordSecondaryCommandBufferEnd(m_secondaryCommandBuffer[0]);
 
     // create the main command buffer with all of the secondary command buffers
-    vkResetCommandBuffer(m_primaryCommandBuffer, 0);
     m_deviceHandler->recordPrimaryCommandBuffer(m_primaryCommandBuffer, m_secondaryCommandBuffer);
 
+    // after we upadte all of the UBOs we can render the frame
     m_deviceHandler->drawFrame(m_primaryCommandBuffer);
 
-    // reset the counter so we will draw the right amount of rectangle
+    // reset all of the variables so we can start and handle the next frame
     m_rectangleCount = 0;
 }
 
-void VulkanRenderer::vulkanRenderRect(std::shared_ptr<Entity> &entity)
+void VulkanRenderer::vulkanRenderRect(const MATH::Vec4& positionAndSize, const MATH::Vec4& color)
 {
-    if (!entity->hasComponent<CTransform>() || !entity->hasComponent<CRectBody>())
-        return;
-    auto& transform = entity->getComponent<CTransform>();
-    auto& body = entity->getComponent<CRectBody>();
-
-    auto vector = MATH::Vec4{(transform.pos.x /m_windowX - 1), (transform.pos.y / m_windowY - 1), 0, 0};
-    m_rectangleUbo.vector[m_rectangleCount] = vector;
-    m_rectangleCount += 1;
+    m_rectangleUbo.positionAndSize[m_rectangleCount] = MATH::Vec4{(positionAndSize.x /m_windowX - 1), (positionAndSize.y / m_windowY - 1), positionAndSize.z/(float)m_windowX, positionAndSize.w/(float)m_windowY};
+    m_rectangleUbo.color[m_rectangleCount] = color;
+    if(m_rectangleCount < 1000)
+        m_rectangleCount += 1;
 }

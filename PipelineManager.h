@@ -54,9 +54,10 @@ private:
 
 public:
 
-    struct uboData
+    struct rectangleUboData
     {
-        MATH::Vec4 vector[1000];
+        MATH::Vec4 positionAndSize[1000];
+        MATH::Vec4 color[1000];
     };
 
     PipelineManager() = delete;
@@ -78,7 +79,7 @@ public:
 
     // descriptorSet part
     VkDescriptorSet &getDescriptorSet(const std::string& name) { return m_descriptorDatas[name].set; };
-    void updateUbo(uboData &newUbo, const std::string& name, uint32_t binding);
+    void updateRectangleUbo(rectangleUboData &newUbo, const std::string& name, uint32_t binding);
 };
 
 #endif

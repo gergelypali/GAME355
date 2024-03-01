@@ -10,11 +10,19 @@ void VulkanScene1::init()
     registerAction(SDL_SCANCODE_A, "LEFT");
     registerAction(SDL_SCANCODE_D, "RIGHT");
 
+    int windowX, windowY;
+    SDL_GetWindowSize(m_ge->window(), &windowX, &windowY);
+
+    auto bg = m_em->addEntity("bg");
+    bg->addComponent<CTransform>(MATH::Vec2{windowX/2, windowY/2}, MATH::Vec2(0.f, 0.f), 0, 0, 0);
+    bg->addComponent<CRectBody>(windowX, windowY, MATH::Vec4{1.f, 0.f, 1.f, 0.f});
+    bg->addComponent<CState>();
+
     m_player = m_em->addEntity("Player");
 
     int playerWidth{40}, playerHeight{40};
     m_player->addComponent<CTransform>(MATH::Vec2{300.f, 200.f}, MATH::Vec2(0.f, 0.f), 0, 90, 300);
-    m_player->addComponent<CRectBody>(playerWidth, playerHeight);
+    m_player->addComponent<CRectBody>(playerWidth, playerHeight, MATH::Vec4{0.f, 0.f, 1.f, 0.f});
     m_player->addComponent<CState>();
 }
 
