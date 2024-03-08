@@ -35,6 +35,7 @@ private:
         VkSurfaceCapabilitiesKHR physicalDeviceSurfaceCapabilities;
         std::vector<VkSurfaceFormatKHR> physicalDeviceSurfaceFormats;
         std::vector<VkPresentModeKHR> physicalDevicePresentModes;
+        VkPhysicalDeviceMemoryProperties physicalDeviceMemoryProperties;
     };
 
     gpuInfo m_info{};

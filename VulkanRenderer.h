@@ -6,11 +6,12 @@
 #include <vector>
 #include "Vector.h"
 #include <memory>
-#include "PipelineManager.h"
+#include <map>
 
 class DeviceHandler;
 class PipelineManager;
 class Entity;
+class VulkanRenderableObject;
 
 class VulkanRenderer
 {
@@ -22,11 +23,12 @@ private:
     DeviceHandler* m_deviceHandler{nullptr};
     PipelineManager* m_pipelineManager{nullptr};
 
+    // we store the renderable objects in a vector maybe
+    std::map<std::string, VulkanRenderableObject*> m_renderTheseObjects;
+    //std::vector<VulkanRenderableObject*> m_renderTheseObjects;
+
     VkCommandBuffer m_primaryCommandBuffer;
     std::vector<VkCommandBuffer> m_secondaryCommandBuffer;
-
-    size_t m_rectangleCount{0};
-    PipelineManager::rectangleUboData m_rectangleUbo{};
 
     void createPrimaryCommandBuffer(VkCommandBuffer& buffer);
     void createSecondaryCommandBuffer(std::vector<VkCommandBuffer>& buffer);

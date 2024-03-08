@@ -377,8 +377,14 @@ bool DeviceHandler::isDeviceGoodForUs(const VkPhysicalDevice& device)
     boolRes = boolRes && surfacePresentGood;
     Logger::Instance()->logVerbose("Vulkan: 4 boolRes " + std::to_string(boolRes));
 
+    // just query the memory properties for later buffer allocation
+    VkPhysicalDeviceMemoryProperties memProperties;
+    vkGetPhysicalDeviceMemoryProperties(device, &memProperties);
+    Logger::Instance()->logCritical("isDeviceGoodForUs 10");
+
     if (boolRes)
     {
+        Logger::Instance()->logCritical("isDeviceGoodForUs 11");
         m_info.physicalDeviceProperties = deviceProperties;
         m_info.physicalDeviceFeatures = deviceFeatures;
         m_info.physicalDeviceQueueFamilyProperties = queueFamilies;
@@ -386,7 +392,9 @@ bool DeviceHandler::isDeviceGoodForUs(const VkPhysicalDevice& device)
         m_info.physicalDeviceSurfaceCapabilities = surfaceCapa;
         m_info.physicalDeviceSurfaceFormats = surfaceFormats;
         m_info.physicalDevicePresentModes = surfacePresents;
+        m_info.physicalDeviceMemoryProperties = memProperties;
     }
+    Logger::Instance()->logCritical("isDeviceGoodForUs 12");
     return boolRes;
 }
 
@@ -696,6 +704,7 @@ void DeviceHandler::drawFrame(VkCommandBuffer& buffer)
     presentInfo.pImageIndices = &m_currentImageIndex;
 
     checkVkResult(vkQueuePresentKHR(m_presentQueue, &presentInfo));
+    checkVkResult(vkQueueWaitIdle(m_presentQueue));
 }
 
 void DeviceHandler::recordPrimaryCommandBuffer(
@@ -792,11 +801,8 @@ void DeviceHandler::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, Vk
 
 uint32_t DeviceHandler::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
 {
-    VkPhysicalDeviceMemoryProperties memProperties;
-    vkGetPhysicalDeviceMemoryProperties(m_physicalDevice, &memProperties);
-
-    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-        if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+    for (uint32_t i = 0; i < m_info.physicalDeviceMemoryProperties.memoryTypeCount; i++) {
+        if ((typeFilter & (1 << i)) && (m_info.physicalDeviceMemoryProperties.memoryTypes[i].propertyFlags & properties) == properties) {
             return i;
         }
     }

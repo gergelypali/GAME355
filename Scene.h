@@ -22,6 +22,9 @@ protected:
     virtual void init() = 0;
     virtual void endScene() = 0;
 
+    bool checkEntityCollision(std::shared_ptr<Entity> &one, std::shared_ptr<Entity> &two);
+    std::pair<bool, bool> checkInsideEntity(std::shared_ptr<Entity>& one, std::shared_ptr<Entity>& two);
+
 public:
     Scene() = delete;
     Scene(GameEngine* ge);

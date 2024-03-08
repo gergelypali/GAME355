@@ -6,30 +6,45 @@
 #include <string>
 #include "Vector.h"
 
-namespace DESCRIPTOR
+namespace VERTEX
 {
-    struct descriptorSetLayoutInfo
+    struct baseVertex
     {
-        std::vector<VkDescriptorSetLayoutBinding> bindings;
-        VkDescriptorSetLayout layout;
-        VkDescriptorSetLayoutCreateInfo layoutCreateInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
+        virtual std::vector<VkVertexInputBindingDescription> getBindingDescriptor() = 0;
+        virtual std::vector<VkVertexInputAttributeDescription> getAttributeDescriptor() = 0;
     };
 
-    struct descriptorSetInfo
+    struct baseRectangle : baseVertex
     {
-        VkDescriptorSetLayout layout;
-        VkDescriptorSetAllocateInfo allocateInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
-        VkDescriptorSet set;
-        // these last two are needed to update the allocated set with real buffer data
-        VkWriteDescriptorSet writeInfo{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-        VkDescriptorBufferInfo bufferInfo;
-    };
+        MATH::Vec2 position;
 
-    struct descriptorPoolInfo
-    {
-        VkDescriptorPool pool;
-        VkDescriptorPoolCreateInfo createInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
-        std::vector<VkDescriptorPoolSize> poolSizes;
+        std::vector<VkVertexInputBindingDescription> getBindingDescriptor() override
+        {
+            std::vector<VkVertexInputBindingDescription> res{};
+
+            VkVertexInputBindingDescription binding0{};
+            binding0.binding = 0;
+            binding0.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+            binding0.stride = sizeof(baseRectangle);
+
+            res.push_back(binding0);
+
+            return res;
+        }
+        std::vector<VkVertexInputAttributeDescription> getAttributeDescriptor() override
+        {
+            std::vector<VkVertexInputAttributeDescription> res{};
+
+            VkVertexInputAttributeDescription input0{};
+            input0.binding = 0;
+            input0.location = 0;
+            input0.format = VK_FORMAT_R32G32_SFLOAT;
+            input0.offset = offsetof(baseRectangle, position);
+
+            res.push_back(input0);
+
+            return res;
+        }
     };
 }
 
@@ -61,6 +76,14 @@ namespace PIPELINE
         VkPipelineLayout layout;
         std::vector<VkDescriptorSetLayout> layouts;
     };
+
+    struct descriptorCreateInfo
+    {
+        VkDescriptorType type;
+        VkShaderStageFlags shaderStageFlags;
+        VkDeviceSize bufferSize;
+        uint8_t numberOfMaxSets{0};
+    };
 }
 
 namespace BUFFER
@@ -74,6 +97,12 @@ namespace BUFFER
     struct uboData
     {
         MATH::Vec4 vector[1000];
+    };
+
+    struct rectangleUboData
+    {
+        MATH::Vec4 positionAndSize[1000];
+        MATH::Vec4 color[1000];
     };
 }
 

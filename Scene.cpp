@@ -235,3 +235,49 @@ void Scene::drawText(std::shared_ptr<Entity> &entity)
 
     m_ge->renderText(text.text, text.font, text.color, text.fontSize, transform.cameraViewPos);
 }
+
+//some physics stuff here
+
+bool Scene::checkEntityCollision(std::shared_ptr<Entity> &one, std::shared_ptr<Entity> &two)
+{
+        if (one->hasComponent<CTransform>() && one->hasComponent<CAABB>() &&
+            two->hasComponent<CTransform>() && two->hasComponent<CAABB>())
+        {
+            auto& oneTransform = one->getComponent<CTransform>();
+            auto& oneAABB = one->getComponent<CAABB>();
+            auto& twoTransform = two->getComponent<CTransform>();
+            auto& twoAABB = two->getComponent<CAABB>();
+
+            MATH::Vec2 diff{fabsf(oneTransform.pos.x - twoTransform.pos.x),
+                            fabsf(oneTransform.pos.y - twoTransform.pos.y)};
+            return diff.x < abs(oneAABB.halfWidth + twoAABB.halfWidth) &&
+                    diff.y < abs(oneAABB.halfHeight + twoAABB.halfHeight);
+        }
+        else
+        {
+            return false;
+        }
+}
+
+std::pair<bool, bool> Scene::checkInsideEntity(std::shared_ptr<Entity>& one, std::shared_ptr<Entity>& two)
+{
+        if (one->hasComponent<CTransform>() && one->hasComponent<CAABB>() &&
+            two->hasComponent<CTransform>() && two->hasComponent<CAABB>())
+        {
+            auto& oneTransform = one->getComponent<CTransform>();
+            auto& oneAABB = one->getComponent<CAABB>();
+            auto& twoTransform = two->getComponent<CTransform>();
+            auto& twoAABB = two->getComponent<CAABB>();
+
+            bool outsideX = oneTransform.pos.x - oneAABB.halfWidth + oneTransform.vel.x < twoTransform.pos.x - twoAABB.halfWidth ||
+                oneTransform.pos.x + oneAABB.halfWidth + oneTransform.vel.x > twoTransform.pos.x + twoAABB.halfWidth;
+            bool outsideY = oneTransform.pos.y - oneAABB.halfHeight + oneTransform.vel.y < twoTransform.pos.y - twoAABB.halfHeight ||
+                oneTransform.pos.y + oneAABB.halfHeight + oneTransform.vel.y > twoTransform.pos.y + twoAABB.halfHeight;
+
+            return std::make_pair(outsideX, outsideY);
+        }
+        else
+        {
+            return std::make_pair(false, false);
+        }
+}

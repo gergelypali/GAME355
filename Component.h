@@ -60,6 +60,7 @@ class CState : public Component
 {
 public:
     CState() {};
+    CState(bool turn, bool move) : turning(turn), moving(move) {};
 
     bool turning{false};
     bool moving{false};

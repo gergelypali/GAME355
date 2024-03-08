@@ -1,8 +1,10 @@
 #include "VulkanRenderer.h"
 #include "DeviceHandler.h"
+#include "PipelineManager.h"
 #include "Entity.h"
 #include <math.h>
 #include "Logger.h"
+#include "Rectangle.h"
 
 VulkanRenderer::VulkanRenderer(SDL_Window* window)
     : m_window(window)
@@ -13,10 +15,13 @@ VulkanRenderer::VulkanRenderer(SDL_Window* window)
     m_windowX = m_deviceHandler->getWindowSize().width / 2;
     m_windowY = m_deviceHandler->getWindowSize().height / 2;
 
-    m_pipelineManager->addBaseGraphicsPipelineCreateInfo("rectanglePipeline");
-    m_pipelineManager->addDescriptorSetToPipelineLayout("rectangleUBO", "rectanglePipelineLayout");
-    m_pipelineManager->createPipelineLayout("rectanglePipelineLayout");
-    m_pipelineManager->createGraphicsPipeline("rectanglePipeline", "rectanglePipelineLayout", "shaders/rectangleShaderVert.spv", "shaders/rectangleShaderFrag.spv");
+    Rectangle* theRectangle = new Rectangle(m_deviceHandler, m_pipelineManager);
+    m_renderTheseObjects.insert({"rectangle", theRectangle});
+
+    // we need to call this before pipeline creation and after all of the renderObjects are in the map
+    m_pipelineManager->initDescriptorConfig();
+
+    for (auto& obj: m_renderTheseObjects) { obj.second->createPipeline(); }
 
     createPrimaryCommandBuffer(m_primaryCommandBuffer);
     m_secondaryCommandBuffer.resize(1);
@@ -25,8 +30,10 @@ VulkanRenderer::VulkanRenderer(SDL_Window* window)
 
 VulkanRenderer::~VulkanRenderer()
 {
-    delete(m_pipelineManager);
-    delete(m_deviceHandler);
+    for (auto& obj: m_renderTheseObjects) { delete obj.second; }
+    m_renderTheseObjects.clear();
+    delete m_pipelineManager;
+    delete m_deviceHandler;
 }
 
 void VulkanRenderer::createPrimaryCommandBuffer(VkCommandBuffer& buffer)
@@ -42,31 +49,33 @@ void VulkanRenderer::createSecondaryCommandBuffer(std::vector<VkCommandBuffer>& 
 void VulkanRenderer::drawFrame()
 {
     // update the UBOs to transfer the new data to the shaders
-    m_pipelineManager->updateRectangleUbo(m_rectangleUbo, "rectangleUBO", 0);
+    for (auto& obj: m_renderTheseObjects) { obj.second->updateUBO(); }
 
     // TODO: we need to recreate them because we have to provide the framebuffer that is used
     // and it is changing per frame
     // if I need more optimalization I can just create this once hopefully, but now I just left this here
     // create a secondary commandbuffer for all of the rectangles we need to draw
-    m_deviceHandler->recordSecondaryCommandBufferStart(m_secondaryCommandBuffer[0], m_pipelineManager->getPipeline("rectanglePipeline"));
-    vkCmdBindDescriptorSets(m_secondaryCommandBuffer[0], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineManager->getPipelineLayout("rectanglePipelineLayout"), 0, 1, &m_pipelineManager->getDescriptorSet("rectangleUBO"), 0, VK_NULL_HANDLE);
-    vkCmdDraw(m_secondaryCommandBuffer[0], 6, m_rectangleCount, 0, 0);
-    m_deviceHandler->recordSecondaryCommandBufferEnd(m_secondaryCommandBuffer[0]);
+    for (auto& obj: m_renderTheseObjects)
+    {
+        // this hardcoded 0 is not good if we have more objects to draw later
+        obj.second->createCommandBuffer(m_secondaryCommandBuffer[0]);
+    }
 
     // create the main command buffer with all of the secondary command buffers
     m_deviceHandler->recordPrimaryCommandBuffer(m_primaryCommandBuffer, m_secondaryCommandBuffer);
 
-    // after we upadte all of the UBOs we can render the frame
+    // after we update all of the UBOs we can render the frame
     m_deviceHandler->drawFrame(m_primaryCommandBuffer);
 
     // reset all of the variables so we can start and handle the next frame
-    m_rectangleCount = 0;
+    for (auto& obj: m_renderTheseObjects) { obj.second->resetFrameVariables(); }
 }
 
 void VulkanRenderer::vulkanRenderRect(const MATH::Vec4& positionAndSize, const MATH::Vec4& color)
 {
-    m_rectangleUbo.positionAndSize[m_rectangleCount] = MATH::Vec4{(positionAndSize.x /m_windowX - 1), (positionAndSize.y / m_windowY - 1), positionAndSize.z/(float)m_windowX, positionAndSize.w/(float)m_windowY};
-    m_rectangleUbo.color[m_rectangleCount] = color;
-    if(m_rectangleCount < 1000)
-        m_rectangleCount += 1;
+    auto rectangle = static_cast<Rectangle*>(m_renderTheseObjects["rectangle"]);
+    rectangle->m_ubodata.positionAndSize[rectangle->m_rectangleCount] = MATH::Vec4{(positionAndSize.x /m_windowX - 1), (positionAndSize.y / m_windowY - 1), positionAndSize.z/(float)m_windowX, positionAndSize.w/(float)m_windowY};
+    rectangle->m_ubodata.color[rectangle->m_rectangleCount] = color;
+    if(rectangle->m_rectangleCount < 1000)
+        rectangle->m_rectangleCount += 1;
 }

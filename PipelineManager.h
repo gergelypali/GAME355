@@ -6,12 +6,13 @@
 #include <vulkan/vulkan.h>
 #include <functional>
 #include "Vector.h"
-
 #include "Structs.h"
 
+using vec4PC = BUFFER::vec4PushConstant;
 using pipelineInfo = PIPELINE::pipelineInfo;
 using pipelineLayoutInfo = PIPELINE::pipelineLayoutInfo;
-using vec4PC = BUFFER::vec4PushConstant;
+using descriptorCreateInfo = PIPELINE::descriptorCreateInfo;
+using rectangleUboData = BUFFER::rectangleUboData;
 
 class DeviceHandler;
 
@@ -36,33 +37,22 @@ private:
         std::vector<VkBuffer> buffer;
         std::vector<VkDeviceMemory> bufferMemory;
         std::vector<void*> bufferMemoryAddress;
-
-    };
-    struct descriptorCreateInfo
-    {
-        VkDescriptorType type;
-        VkShaderStageFlags shaderStageFlags;
-        VkDeviceSize bufferSize;
-        uint8_t numberOfMaxSets{0};
     };
 
     std::map<std::string, std::vector<descriptorCreateInfo>> m_descriptorCreateInfos;
     std::map<std::string, descriptorData> m_descriptorDatas;
     VkDescriptorPool m_descriptorPool;
 
-    void initDescriptorConfig();
-
 public:
-
-    struct rectangleUboData
-    {
-        MATH::Vec4 positionAndSize[1000];
-        MATH::Vec4 color[1000];
-    };
 
     PipelineManager() = delete;
     PipelineManager(DeviceHandler* de);
     ~PipelineManager();
+    // rule of many
+    PipelineManager(const PipelineManager&) = delete;
+    PipelineManager(PipelineManager&&) = delete;
+    PipelineManager& operator=(const PipelineManager&) = delete;
+    PipelineManager& operator=(PipelineManager&&) = delete;
 
     // can add more type of pipeline: compute for example
     // pipeline part
@@ -70,6 +60,7 @@ public:
     void createGraphicsPipeline(const std::string& name, const std::string& pipelineLayoutName, const std::string& vertPath, const std::string& fragPath);
     pipelineInfo &getGraphicsPipelineInfo(const std::string& name) { return m_pipelines[name]; };
     VkPipeline &getPipeline(const std::string& name) { return m_pipelines[name].pipeline; };
+    void addVertexDataToPipeline(const std::string& vertexName, pipelineInfo& pipelineInfo);
 
     // pipelinelayout part
     pipelineLayoutInfo &addVec4PushConstantPipelineLayout(const std::string& name);
@@ -79,7 +70,11 @@ public:
 
     // descriptorSet part
     VkDescriptorSet &getDescriptorSet(const std::string& name) { return m_descriptorDatas[name].set; };
-    void updateRectangleUbo(rectangleUboData &newUbo, const std::string& name, uint32_t binding);
+    void updateUbo(rectangleUboData &newUbo, const std::string& descriptorName, uint32_t binding);
+
+    void updateDescriptorCreateInfos(const std::string& name, const std::vector<descriptorCreateInfo>& newCreateInfos);
+    void initDescriptorConfig();
+    std::vector<void*> getUBOAddress(const std::string& name) { return m_descriptorDatas[name].bufferMemoryAddress; };
 };
 
 #endif

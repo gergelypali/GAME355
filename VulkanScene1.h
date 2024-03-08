@@ -9,6 +9,8 @@ class VulkanScene1: public Scene
 {
 private:
     std::shared_ptr<Entity> m_player{nullptr};
+    std::shared_ptr<Entity> m_map{nullptr};
+    int windowX, windowY;
 
     void init() override;
     void endScene() override;
@@ -18,6 +20,9 @@ private:
 
     void sMovement();
     void playerPhysicsUpdate();
+    void reactToMapBorder();
+
+    void spawnEnemy(const float& x, const float& y);
 
 public:
     VulkanScene1() = delete;

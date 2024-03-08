@@ -8,18 +8,6 @@ PipelineManager::PipelineManager(DeviceHandler *de)
 {
     m_logicalDevice = m_deviceHandler->getLogicalDevice();
     m_checkVkResult = std::bind(&DeviceHandler::checkVkResult, m_deviceHandler, std::placeholders::_1);
-
-    // descriptor for the ubo for rectangle rendering
-    std::vector<descriptorCreateInfo> rectangleUboCreateInfo;
-    descriptorCreateInfo uboBinding0{};
-    uboBinding0.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    uboBinding0.bufferSize = sizeof(rectangleUboData);
-    uboBinding0.numberOfMaxSets = 5;
-    uboBinding0.shaderStageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    rectangleUboCreateInfo.push_back(uboBinding0);
-    m_descriptorCreateInfos.insert({"rectangleUBO", rectangleUboCreateInfo});
-
-    initDescriptorConfig();
 }
 
 PipelineManager::~PipelineManager()
@@ -39,6 +27,39 @@ PipelineManager::~PipelineManager()
     { vkDestroyPipeline(m_logicalDevice, value.pipeline, nullptr); }
     for (auto& [key, value]: m_pipelineLayouts)
     { vkDestroyPipelineLayout(m_logicalDevice, value.layout, nullptr); }
+}
+
+void PipelineManager::updateDescriptorCreateInfos(const std::string& name, const std::vector<descriptorCreateInfo>& newCreateInfos)
+{
+    m_descriptorCreateInfos.insert({name, newCreateInfos});
+}
+
+void PipelineManager::addVertexDataToPipeline(const std::string& vertexName, pipelineInfo& pipelineInfo)
+{
+    Logger::Instance()->logVerbose("addVertexDataToPipeline 1");
+    VERTEX::baseVertex* vertexData{nullptr};
+    Logger::Instance()->logVerbose("addVertexDataToPipeline 2");
+    if (vertexName == "rectangle")
+    {
+        vertexData = new VERTEX::baseRectangle();
+        Logger::Instance()->logVerbose("addVertexDataToPipeline 3");
+    }
+    else
+    {
+        Logger::Instance()->logError("PipelineManager: cannot find VertexData to add named: " + vertexName);
+        return;
+    }
+    Logger::Instance()->logVerbose("addVertexDataToPipeline 4");
+    auto binding = vertexData->getBindingDescriptor();
+    Logger::Instance()->logVerbose("addVertexDataToPipeline 5");
+    auto attribute = vertexData->getAttributeDescriptor();
+    Logger::Instance()->logVerbose("addVertexDataToPipeline 6");
+    pipelineInfo.vertexInputCreateInfo.vertexAttributeDescriptionCount = (uint32_t)attribute.size();
+    pipelineInfo.vertexInputCreateInfo.pVertexAttributeDescriptions = attribute.data();
+    pipelineInfo.vertexInputCreateInfo.vertexBindingDescriptionCount = (uint32_t)binding.size();
+    pipelineInfo.vertexInputCreateInfo.pVertexBindingDescriptions = binding.data();
+    Logger::Instance()->logVerbose("addVertexDataToPipeline 7");
+    delete vertexData;
 }
 
 pipelineInfo &PipelineManager::addBaseGraphicsPipelineCreateInfo(const std::string &name)
@@ -349,9 +370,9 @@ void PipelineManager::createPipelineLayout(const std::string& name)
     Logger::Instance()->logError("createPipelineLayout: 2");
 }
 
-void PipelineManager::updateRectangleUbo(rectangleUboData &newUbo, const std::string& name, uint32_t binding)
+void PipelineManager::updateUbo(rectangleUboData &newUbo, const std::string& descriptorName, uint32_t binding)
 {
-    memcpy(m_descriptorDatas[name].bufferMemoryAddress[binding], &newUbo, sizeof(newUbo));
+    memcpy(m_descriptorDatas[descriptorName].bufferMemoryAddress[binding], &newUbo, sizeof(newUbo));
 }
 
 std::vector<char> PipelineManager::readFile(const std::string& path) {
