@@ -1,6 +1,7 @@
 #include "AssetManager.h"
 #include "GameEngine.h"
 #include "Animation.h"
+#include "VulkanRenderer.h"
 
 #include <SDL.h>
 #include <SDL_image.h>
@@ -48,6 +49,12 @@ AssetManager::AssetManager(GameEngine* ge)
     //AddFont("Guazhiru", "fonts/Guazhiru.ttf");
     AddFont("Nasa21", "fonts/Nasa21.ttf");
     //AddFont("ToThePoint", "fonts/ToThePoint.ttf");
+
+    // vertices and indices
+    AddVertexBuffer("rectangleVertex", "./2dRectangleVertex.txt");
+    AddIndexBuffer("rectangleIndex", "./2dRectangleIndex.txt");
+    AddIndexBuffer("triangleIndex", "./2dTriangleIndex.txt");
+    AddIndexBuffer("newformIndex", "./2dNewFormIndex.txt");
 }
 
 AssetManager::~AssetManager()
@@ -57,20 +64,31 @@ AssetManager::~AssetManager()
         SDL_DestroyTexture(val);
         val = nullptr;
     }
+    m_textures.clear();
     for (auto& [key, val]: m_animations)
     {
         val.reset();
     }
+    m_animations.clear();
     for (auto& [key, val]: m_sounds)
     {
         Mix_FreeChunk(val);
         val = nullptr;
     }
+    m_sounds.clear();
     for (auto& [key, val]: m_musics)
     {
         Mix_FreeMusic(val);
         val = nullptr;
     }
+    m_musics.clear();
+    for (auto& [key, val]: m_fonts)
+    {
+        TTF_CloseFont(val);
+        val = nullptr;
+    }
+    m_fonts.clear();
+    // TODO: clear up the vkbuffer and vkdevicememory
 }
 
 void AssetManager::AddTexture(const std::string &name, const std::string &pathToFile)
@@ -152,4 +170,48 @@ void AssetManager::AddFont(const std::string &name, const std::string &pathToFil
 TTF_Font *AssetManager::GetFont(const std::string &name)
 {
     return m_fonts[name];
+}
+
+void AssetManager::AddVertexBuffer(const std::string& name, const std::string& pathToFile)
+{
+    if (m_vertexBuffers.find(name)!=m_vertexBuffers.end())
+        return;
+
+    VkBuffer buffer;
+    VkDeviceMemory bufferMemory;
+    if (m_ge->vulkanRenderer()->load2dVertexBuffer(pathToFile, buffer, bufferMemory))
+        m_vertexBuffers.insert({name, vulkanBufferData{buffer, bufferMemory, 0}});
+}
+
+VkBuffer &AssetManager::GetVertexBuffer(const std::string& name)
+{
+    if (m_vertexBuffers.find(name) == m_vertexBuffers.end())
+        throw std::out_of_range("AssetManager: cannot get vertex asset named: " + name);
+    return m_vertexBuffers[name].buffer;
+}
+
+int AssetManager::GetIndexSize(const std::string& name)
+{
+    if (m_indexBuffers.find(name) == m_indexBuffers.end())
+        throw std::out_of_range("AssetManager: cannot get index asset named: " + name);
+    return m_indexBuffers[name].size;
+}
+
+void AssetManager::AddIndexBuffer(const std::string& name, const std::string& pathToFile)
+{
+    if (m_indexBuffers.find(name)!=m_indexBuffers.end())
+        return;
+
+    VkBuffer buffer;
+    VkDeviceMemory bufferMemory;
+    int size{0};
+    if (m_ge->vulkanRenderer()->loadIndexBuffer(pathToFile, buffer, bufferMemory, size))
+        m_indexBuffers.insert({name, vulkanBufferData{buffer, bufferMemory, size}});
+}
+
+VkBuffer &AssetManager::GetIndexBuffer(const std::string& name)
+{
+    if (m_indexBuffers.find(name) == m_indexBuffers.end())
+        throw std::out_of_range("AssetManager: cannot get index asset named: " + name);
+    return m_indexBuffers[name].buffer;
 }

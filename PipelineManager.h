@@ -60,7 +60,7 @@ public:
     void createGraphicsPipeline(const std::string& name, const std::string& pipelineLayoutName, const std::string& vertPath, const std::string& fragPath);
     pipelineInfo &getGraphicsPipelineInfo(const std::string& name) { return m_pipelines[name]; };
     VkPipeline &getPipeline(const std::string& name) { return m_pipelines[name].pipeline; };
-    void addVertexDataToPipeline(const std::string& vertexName, pipelineInfo& pipelineInfo);
+    void addVertexDataToPipeline(const std::string& vertexName, const std::string& pipelineName);
 
     // pipelinelayout part
     pipelineLayoutInfo &addVec4PushConstantPipelineLayout(const std::string& name);

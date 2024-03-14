@@ -11,19 +11,18 @@ class PipelineManager;
 class Rectangle : public VulkanRenderableObject
 {
 public:
-    Rectangle() = delete;
-    Rectangle(DeviceHandler* dh, PipelineManager* pm) : VulkanRenderableObject(dh, pm, "rectangle") { init(); };
-    void updateUBO() override;
+    Rectangle() : VulkanRenderableObject("rectangle") { init(); };
+    void updateUBO(void* address) override;
     void resetFrameVariables() override;
-    void createPipeline() override;
+    void createPipeline(PipelineManager* pm) override;
     void createCommandBuffer(VkCommandBuffer& buffer) override;
+    std::vector<descriptorCreateInfo> createDescriptorCreateInfo() override;
 
     size_t m_rectangleCount{0};
     rectangleUboData m_ubodata;
 
 private:
     void init() override;
-    void createDescriptorCreateInfo() override;
 
 };
 

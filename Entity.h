@@ -17,6 +17,7 @@ private:
         CLifetime,
         CScore,
         CTexture,
+        CShape2d,
         CSpriteSet,
         CSpriteStack,
         CAnimation,

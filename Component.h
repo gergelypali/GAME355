@@ -126,6 +126,18 @@ public:
 
 };
 
+class CShape2d : public Component
+{
+public:
+    CShape2d() {};
+    CShape2d(const std::string& vertName, const std::string& indName)
+        : vertexName(vertName), indexName(indName) {};
+
+    std::string vertexName{""};
+    std::string indexName{""};
+
+};
+
 class CSpriteSet : public Component
 {
 public:

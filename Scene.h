@@ -40,6 +40,7 @@ public:
 
     // rendering methods
     void drawRect(std::shared_ptr<Entity> &entity);
+    void drawShape2d(std::shared_ptr<Entity> &entity);
     void drawTexture(std::shared_ptr<Entity> &entity);
     void drawSpriteSet(std::shared_ptr<Entity> &entity);
     void drawSpriteStack(std::shared_ptr<Entity> &entity);

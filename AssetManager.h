@@ -8,6 +8,7 @@
 #include <SDL_image.h>
 #include <SDL_mixer.h>
 #include <SDL_ttf.h>
+#include <vulkan/vulkan.h>
 
 class GameEngine;
 class Animation;
@@ -17,12 +18,24 @@ class AssetManager
 private:
     GameEngine* m_ge{nullptr};
 
+    struct vulkanBufferData
+    {
+        vulkanBufferData() {};
+        vulkanBufferData(VkBuffer buf, VkDeviceMemory bufMem, int siz)
+            : buffer(buf), bufferMemory(bufMem), size(siz){};
+        VkBuffer buffer;
+        VkDeviceMemory bufferMemory;
+        int size;
+    };
+
     // maps to store the assets
     std::map<std::string, SDL_Texture*> m_textures;
     std::map<std::string, std::shared_ptr<Animation>> m_animations;
     std::map<std::string, Mix_Chunk*> m_sounds;
     std::map<std::string, Mix_Music*> m_musics;
     std::map<std::string, TTF_Font*> m_fonts;
+    std::map<std::string, vulkanBufferData> m_vertexBuffers;
+    std::map<std::string, vulkanBufferData> m_indexBuffers;
 
     int m_initFontSize{50};
 
@@ -55,6 +68,13 @@ public:
 
     void AddFont(const std::string& name, const std::string& pathToFile);
     TTF_Font* GetFont(const std::string& name);
+
+    void AddVertexBuffer(const std::string& name, const std::string& pathToFile);
+    VkBuffer &GetVertexBuffer(const std::string& name);
+
+    void AddIndexBuffer(const std::string& name, const std::string& pathToFile);
+    VkBuffer &GetIndexBuffer(const std::string& name);
+    int GetIndexSize(const std::string& name);
 
 };
 

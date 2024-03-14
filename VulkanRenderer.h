@@ -33,6 +33,10 @@ private:
     void createPrimaryCommandBuffer(VkCommandBuffer& buffer);
     void createSecondaryCommandBuffer(std::vector<VkCommandBuffer>& buffer);
 
+    bool createDeviceBuffer(const std::string& pathToFile, VkBuffer& buffer, VkBufferUsageFlags flags, VkDeviceMemory& bufferMemory, VkDeviceSize size, void* dataPointer);
+    std::vector<MATH::Vec2> load2dVertexFile(const std::string& pathToFile);
+    std::vector<uint32_t> loadIndexFile(const std::string& pathToFile);
+
 public:
     VulkanRenderer() = delete;
     VulkanRenderer(const VulkanRenderer&) = delete;  /// Copy constructor
@@ -44,7 +48,11 @@ public:
     ~VulkanRenderer();
 
     void drawFrame();
-    void vulkanRenderRect(const MATH::Vec4& positionAndSize, const MATH::Vec4& color);//this will just update the command buffer with the new commands
+    void vulkanRenderRect(const MATH::Vec2& position, const MATH::Vec2& size, const MATH::Vec4& color);//this will just update the command buffer with the new commands
+    void vulkanRenderShape2d(const std::string& shapeName, const MATH::Vec2& position, const MATH::Vec2& size, MATH::Vec4& color, VkBuffer& vertexBuffer, VkBuffer& indexBuffer, int indexCount);
+
+    bool load2dVertexBuffer(const std::string& pathToFile, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+    bool loadIndexBuffer(const std::string& pathToFile, VkBuffer& buffer, VkDeviceMemory& bufferMemory, int& size);
 };
 
 #endif

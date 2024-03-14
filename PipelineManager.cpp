@@ -34,7 +34,7 @@ void PipelineManager::updateDescriptorCreateInfos(const std::string& name, const
     m_descriptorCreateInfos.insert({name, newCreateInfos});
 }
 
-void PipelineManager::addVertexDataToPipeline(const std::string& vertexName, pipelineInfo& pipelineInfo)
+void PipelineManager::addVertexDataToPipeline(const std::string& vertexName, const std::string& pipelineName)
 {
     Logger::Instance()->logVerbose("addVertexDataToPipeline 1");
     VERTEX::baseVertex* vertexData{nullptr};
@@ -50,14 +50,14 @@ void PipelineManager::addVertexDataToPipeline(const std::string& vertexName, pip
         return;
     }
     Logger::Instance()->logVerbose("addVertexDataToPipeline 4");
-    auto binding = vertexData->getBindingDescriptor();
+    m_pipelines[pipelineName].vertexInputBindings = vertexData->getBindingDescriptor();
     Logger::Instance()->logVerbose("addVertexDataToPipeline 5");
-    auto attribute = vertexData->getAttributeDescriptor();
+    m_pipelines[pipelineName].vertexInputAttributes = vertexData->getAttributeDescriptor();
     Logger::Instance()->logVerbose("addVertexDataToPipeline 6");
-    pipelineInfo.vertexInputCreateInfo.vertexAttributeDescriptionCount = (uint32_t)attribute.size();
-    pipelineInfo.vertexInputCreateInfo.pVertexAttributeDescriptions = attribute.data();
-    pipelineInfo.vertexInputCreateInfo.vertexBindingDescriptionCount = (uint32_t)binding.size();
-    pipelineInfo.vertexInputCreateInfo.pVertexBindingDescriptions = binding.data();
+    m_pipelines[pipelineName].vertexInputCreateInfo.vertexAttributeDescriptionCount = (uint32_t)m_pipelines[pipelineName].vertexInputAttributes.size();
+    m_pipelines[pipelineName].vertexInputCreateInfo.pVertexAttributeDescriptions = m_pipelines[pipelineName].vertexInputAttributes.data();
+    m_pipelines[pipelineName].vertexInputCreateInfo.vertexBindingDescriptionCount = (uint32_t)m_pipelines[pipelineName].vertexInputBindings.size();
+    m_pipelines[pipelineName].vertexInputCreateInfo.pVertexBindingDescriptions = m_pipelines[pipelineName].vertexInputBindings.data();
     Logger::Instance()->logVerbose("addVertexDataToPipeline 7");
     delete vertexData;
 }

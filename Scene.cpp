@@ -61,6 +61,10 @@ void Scene::sRender()
                 {
                     drawVoxel(entity);
                 }
+                else if (entity->hasComponent<CShape2d>())
+                {
+                    drawShape2d(entity);
+                }
                 else
                 {
                     drawRect(entity);
@@ -78,6 +82,31 @@ void Scene::sRender()
     {
         m_ge->vulkanRenderer()->drawFrame();
     }
+}
+
+void Scene::drawShape2d(std::shared_ptr<Entity> &entity)
+{
+    if (!entity->hasComponent<CTransform>() || !entity->hasComponent<CRectBody>() || !entity->hasComponent<CShape2d>())
+        return;
+    auto& transform = entity->getComponent<CTransform>();
+    auto& body = entity->getComponent<CRectBody>();
+    auto& shape = entity->getComponent<CShape2d>();
+
+    if (m_ge->isSDL())
+        return;
+
+    MATH::Vec2 position{transform.pos.x, transform.pos.y};
+    MATH::Vec2 size{body.halfWidth(), body.halfHeight()};
+    MATH::Vec4 color{body.color()};
+    m_ge->vulkanRenderer()->vulkanRenderShape2d(
+        shape.vertexName,
+        position,
+        size,
+        color,
+        m_ge->assetManager()->GetVertexBuffer(shape.vertexName),
+        m_ge->assetManager()->GetIndexBuffer(shape.indexName),
+        m_ge->assetManager()->GetIndexSize(shape.indexName)
+        );
 }
 
 void Scene::drawRect(std::shared_ptr<Entity> &entity)
@@ -107,9 +136,10 @@ void Scene::drawRect(std::shared_ptr<Entity> &entity)
     }
     else
     {
-        MATH::Vec4 positionAndSize{transform.pos.x, transform.pos.y, body.halfWidth(), body.halfHeight()};
+        MATH::Vec2 position{transform.pos.x, transform.pos.y};
+        MATH::Vec2 size{body.halfWidth(), body.halfHeight()};
 
-        m_ge->vulkanRenderer()->vulkanRenderRect(positionAndSize, body.color());
+        m_ge->vulkanRenderer()->vulkanRenderRect(position, size, body.color());
     }
 }
 

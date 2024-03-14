@@ -25,7 +25,7 @@ namespace VERTEX
             VkVertexInputBindingDescription binding0{};
             binding0.binding = 0;
             binding0.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-            binding0.stride = sizeof(baseRectangle);
+            binding0.stride = sizeof(position);
 
             res.push_back(binding0);
 
@@ -39,7 +39,7 @@ namespace VERTEX
             input0.binding = 0;
             input0.location = 0;
             input0.format = VK_FORMAT_R32G32_SFLOAT;
-            input0.offset = offsetof(baseRectangle, position);
+            input0.offset = 0;
 
             res.push_back(input0);
 
@@ -55,6 +55,8 @@ namespace PIPELINE
         std::string vertShaderPath{""};
         std::string fragShaderPath{""};
         std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
+        std::vector<VkVertexInputBindingDescription> vertexInputBindings;
+        std::vector<VkVertexInputAttributeDescription> vertexInputAttributes;
         VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo{VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
         VkPipelineInputAssemblyStateCreateInfo inputAssemblyCreateInfo{VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO};
         VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo{VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO};
@@ -100,6 +102,12 @@ namespace BUFFER
     };
 
     struct rectangleUboData
+    {
+        MATH::Vec4 positionAndSize[1000];
+        MATH::Vec4 color[1000];
+    };
+
+    struct shape2dUboData
     {
         MATH::Vec4 positionAndSize[1000];
         MATH::Vec4 color[1000];
