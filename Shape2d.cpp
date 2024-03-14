@@ -2,6 +2,7 @@
 #include "Logger.h"
 #include "PipelineManager.h"
 #include <vulkan/vulkan.h>
+#include <cstring>//somehow we need this for macos; but not in rectangle.cpp, strange
 
 void Shape2d::init()
 {
@@ -41,7 +42,7 @@ void Shape2d::updateUBO(void* address)
     auto endCol = std::end(m_ubodata.color);
     for (auto& [key, value]: m_vertexData)
     {
-        for (auto& obj: value)
+        for (auto& obj: value.uboData)
         {
             if (itPos == endPos || itCol == endCol)
                 break;
@@ -69,21 +70,24 @@ void Shape2d::createCommandBuffer(VkCommandBuffer& buffer)
     for (auto& obj: m_vertexData)
     {
         VkDeviceSize offsets[] = {0};
-        vkCmdBindVertexBuffers(buffer, 0, 1, &m_vertexBufferMap[obj.first], offsets);
-        vkCmdBindIndexBuffer(buffer, m_indexBufferMap[obj.first].first, 0, VK_INDEX_TYPE_UINT32);
-        vkCmdDrawIndexed(buffer, m_indexBufferMap[obj.first].second, m_vertexData[obj.first].size(), 0, 0, instanceOffset);
-        instanceOffset += m_vertexData[obj.first].size();
+        vkCmdBindVertexBuffers(buffer, 0, 1, &m_vertexBufferMap[obj.second.nameVertex], offsets);
+        vkCmdBindIndexBuffer(buffer, m_indexBufferMap[obj.second.nameIndex].first, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdDrawIndexed(buffer, m_indexBufferMap[obj.second.nameIndex].second, obj.second.uboData.size(), 0, 0, instanceOffset);
+        instanceOffset += obj.second.uboData.size();
     }
 }
 
-void Shape2d::addShape2dToDraw(const std::string &name, MATH::Vec4 &positionAndSize, MATH::Vec4 &color, VkBuffer& vertexBuffer, VkBuffer& indexBuffer, int indexCount)
+void Shape2d::addShape2dToDraw(const std::string &nameVertex, const std::string &nameIndex, MATH::Vec4 &positionAndSize, MATH::Vec4 &color, VkBuffer& vertexBuffer, VkBuffer& indexBuffer, int indexCount)
 {
-    if (m_vertexData.find(name) == m_vertexData.end())
-        m_vertexData.insert({ name, {} });
+    if (m_vertexData.find(nameVertex + nameIndex) == m_vertexData.end())
+    {
+        m_vertexData.insert({ nameVertex + nameIndex, {} });
+        m_vertexData[nameVertex + nameIndex].nameIndex = nameIndex;
+        m_vertexData[nameVertex + nameIndex].nameVertex = nameVertex;
+    }
 
-    auto insertThis = std::make_pair(positionAndSize, color);
-    m_vertexData[name].push_back(insertThis);
+    m_vertexData[nameVertex + nameIndex].uboData.push_back(std::make_pair(positionAndSize, color));
 
-    m_vertexBufferMap[name] = vertexBuffer;
-    m_indexBufferMap[name] = std::make_pair(indexBuffer, indexCount);
+    m_vertexBufferMap[nameVertex] = vertexBuffer;
+    m_indexBufferMap[nameIndex] = std::make_pair(indexBuffer, indexCount);
 }

@@ -100,6 +100,7 @@ void Scene::drawShape2d(std::shared_ptr<Entity> &entity)
     MATH::Vec4 color{body.color()};
     m_ge->vulkanRenderer()->vulkanRenderShape2d(
         shape.vertexName,
+        shape.indexName,
         position,
         size,
         color,

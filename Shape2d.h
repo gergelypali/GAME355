@@ -20,14 +20,21 @@ public:
     void createCommandBuffer(VkCommandBuffer& buffer) override;
     std::vector<descriptorCreateInfo> createDescriptorCreateInfo() override;
 
-    void addShape2dToDraw(const std::string& name, MATH::Vec4& positionAndSize, MATH::Vec4 &color, VkBuffer& vertexBuffer, VkBuffer& indexBuffer, int indexCount);
+    void addShape2dToDraw(const std::string &nameVertex, const std::string &nameIndex, MATH::Vec4& positionAndSize, MATH::Vec4 &color, VkBuffer& vertexBuffer, VkBuffer& indexBuffer, int indexCount);
 
     size_t m_shapeCount{0};
 
 private:
     void init() override;
 
-    std::map<std::string, std::vector<std::pair<MATH::Vec4, MATH::Vec4>>> m_vertexData;
+    struct shapeData
+    {
+        std::vector<std::pair<MATH::Vec4, MATH::Vec4>> uboData;
+        std::string nameVertex;
+        std::string nameIndex;
+    };
+
+    std::map<std::string, shapeData> m_vertexData;
     shape2dUboData m_ubodata;
     std::unordered_map<std::string, VkBuffer> m_vertexBufferMap;
     std::unordered_map<std::string, std::pair<VkBuffer, int>> m_indexBufferMap;
