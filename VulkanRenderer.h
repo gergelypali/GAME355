@@ -33,7 +33,8 @@ private:
     void createPrimaryCommandBuffer(VkCommandBuffer& buffer);
     void createSecondaryCommandBuffer(std::vector<VkCommandBuffer>& buffer);
 
-    bool createDeviceBuffer(const std::string& pathToFile, VkBuffer& buffer, VkBufferUsageFlags flags, VkDeviceMemory& bufferMemory, VkDeviceSize size, void* dataPointer);
+    bool createAndCopyDataToGPUSideBuffer(VkBuffer& buffer, VkBufferUsageFlags flags, VkDeviceMemory& bufferMemory, VkDeviceSize size, void* dataPointer);
+    bool createAndCopyDataToCPUSideBuffer(VkBuffer& buffer, VkBufferUsageFlags flags, VkDeviceMemory& bufferMemory, VkDeviceSize size, void* dataPointer);
     std::vector<MATH::Vec2> load2dVertexFile(const std::string& pathToFile);
     std::vector<uint32_t> loadIndexFile(const std::string& pathToFile);
 

@@ -107,9 +107,11 @@ public:
     void drawFrame(VkCommandBuffer& buffer);
     void createCommandBuffer(VkCommandBuffer& buffer, VkCommandBufferLevel level);
     void createCommandBuffer(std::vector<VkCommandBuffer>& buffer, VkCommandBufferLevel level);
-    void recordPrimaryCommandBuffer(VkCommandBuffer& buffer, std::vector<VkCommandBuffer>& secBuffers);
-    void recordSecondaryCommandBufferStart(VkCommandBuffer& buffer, const VkPipeline& pipeline);
-    void recordSecondaryCommandBufferEnd(VkCommandBuffer& buffer);
+    void recordRenderPrimaryCommandBuffer(VkCommandBuffer& buffer, std::vector<VkCommandBuffer>& secBuffers);
+    void recordRenderSecondaryCommandBufferStart(VkCommandBuffer& buffer, const VkPipeline& pipeline);
+    void recordEndCommandBuffer(VkCommandBuffer& buffer);
+    void recordOneTimerCommandBufferStart(VkCommandBuffer& buffer);
+    void copyBufferToGPU(VkBuffer& sourceBuffer, VkBuffer& destinationBuffer, VkDeviceSize& size);
 
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 

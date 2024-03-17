@@ -707,7 +707,7 @@ void DeviceHandler::drawFrame(VkCommandBuffer& buffer)
     checkVkResult(vkQueueWaitIdle(m_presentQueue));
 }
 
-void DeviceHandler::recordPrimaryCommandBuffer(
+void DeviceHandler::recordRenderPrimaryCommandBuffer(
     VkCommandBuffer& buffer,
     std::vector<VkCommandBuffer>& secBuffers
     )
@@ -732,10 +732,10 @@ void DeviceHandler::recordPrimaryCommandBuffer(
 
     vkCmdEndRenderPass(buffer);
 
-    checkVkResult(vkEndCommandBuffer(buffer));
+    recordEndCommandBuffer(buffer);
 }
 
-void DeviceHandler::recordSecondaryCommandBufferStart(VkCommandBuffer& buffer, const VkPipeline& pipeline)
+void DeviceHandler::recordRenderSecondaryCommandBufferStart(VkCommandBuffer& buffer, const VkPipeline& pipeline)
 {
     VkCommandBufferInheritanceInfo inheritanceInfo{VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO};
     inheritanceInfo.renderPass = m_renderPass;
@@ -767,9 +767,42 @@ void DeviceHandler::recordSecondaryCommandBufferStart(VkCommandBuffer& buffer, c
     vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 }
 
-void DeviceHandler::recordSecondaryCommandBufferEnd(VkCommandBuffer& buffer)
+void DeviceHandler::recordOneTimerCommandBufferStart(VkCommandBuffer& buffer)
+{
+    createCommandBuffer(buffer, VkCommandBufferLevel::VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+
+    VkCommandBufferBeginInfo beginInfo{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    vkBeginCommandBuffer(buffer, &beginInfo);
+}
+
+void DeviceHandler::recordEndCommandBuffer(VkCommandBuffer& buffer)
 {
     checkVkResult(vkEndCommandBuffer(buffer));
+}
+
+void DeviceHandler::copyBufferToGPU(VkBuffer& sourceBuffer, VkBuffer& destinationBuffer, VkDeviceSize& size)
+{
+    VkCommandBuffer copyCommand;
+
+    recordOneTimerCommandBufferStart(copyCommand);
+
+    VkBufferCopy copyRegion{};
+    copyRegion.size = size;
+    vkCmdCopyBuffer(copyCommand, sourceBuffer, destinationBuffer, 1, &copyRegion);
+
+    recordEndCommandBuffer(copyCommand);
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &copyCommand;
+
+    checkVkResult(vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
+    checkVkResult(vkQueueWaitIdle(m_graphicsQueue));
+
+    vkFreeCommandBuffers(m_logicalDevice, m_commandPool, 1, &copyCommand);
 }
 
 void DeviceHandler::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory)

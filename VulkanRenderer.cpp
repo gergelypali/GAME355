@@ -85,7 +85,41 @@ std::vector<uint32_t> VulkanRenderer::loadIndexFile(const std::string& pathToFil
     return indices;
 }
 
-bool VulkanRenderer::createDeviceBuffer(const std::string& pathToFile, VkBuffer& buffer, VkBufferUsageFlags flags, VkDeviceMemory& bufferMemory, VkDeviceSize size, void* dataPointer)
+bool VulkanRenderer::createAndCopyDataToGPUSideBuffer(VkBuffer& buffer, VkBufferUsageFlags flags, VkDeviceMemory& bufferMemory, VkDeviceSize size, void* dataPointer)
+{
+    // create a temporary stagingBuffer that will be the sourceBuffer to copy from to the GPU
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingMemory;
+    m_deviceHandler->createBuffer(
+        size,
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        stagingBuffer,
+        stagingMemory
+        );
+
+    void* data;
+    vkMapMemory(m_deviceHandler->getLogicalDevice(), stagingMemory, 0, size, 0, &data);
+    memcpy(data, dataPointer, (size_t)size);
+    vkUnmapMemory(m_deviceHandler->getLogicalDevice(), stagingMemory);
+
+    m_deviceHandler->createBuffer(
+        size,
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        buffer,
+        bufferMemory
+        );
+
+    m_deviceHandler->copyBufferToGPU(stagingBuffer, buffer, size);
+
+    vkDestroyBuffer(m_deviceHandler->getLogicalDevice(), stagingBuffer, VK_NULL_HANDLE);
+    vkFreeMemory(m_deviceHandler->getLogicalDevice(), stagingMemory, VK_NULL_HANDLE);
+
+    return true;
+}
+
+bool VulkanRenderer::createAndCopyDataToCPUSideBuffer(VkBuffer& buffer, VkBufferUsageFlags flags, VkDeviceMemory& bufferMemory, VkDeviceSize size, void* dataPointer)
 {
     m_deviceHandler->createBuffer(size, flags, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, buffer, bufferMemory);
 
@@ -108,15 +142,15 @@ void VulkanRenderer::drawFrame()
     int i{0};
     for (auto& obj: m_renderTheseObjects)
     {
-        m_deviceHandler->recordSecondaryCommandBufferStart(m_secondaryCommandBuffer[i], m_pipelineManager->getPipeline(obj.first + "Pipeline"));
+        m_deviceHandler->recordRenderSecondaryCommandBufferStart(m_secondaryCommandBuffer[i], m_pipelineManager->getPipeline(obj.first + "Pipeline"));
         vkCmdBindDescriptorSets(m_secondaryCommandBuffer[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineManager->getPipelineLayout(obj.first + "PipelineLayout"), 0, 1, &m_pipelineManager->getDescriptorSet(obj.first + "UBO"), 0, VK_NULL_HANDLE);
         obj.second->createCommandBuffer(m_secondaryCommandBuffer[i]);
-        m_deviceHandler->recordSecondaryCommandBufferEnd(m_secondaryCommandBuffer[i]);
+        m_deviceHandler->recordEndCommandBuffer(m_secondaryCommandBuffer[i]);
         i++;
     }
 
     // create the main command buffer with all of the secondary command buffers
-    m_deviceHandler->recordPrimaryCommandBuffer(m_primaryCommandBuffer, m_secondaryCommandBuffer);
+    m_deviceHandler->recordRenderPrimaryCommandBuffer(m_primaryCommandBuffer, m_secondaryCommandBuffer);
     // after we update all of the UBOs we can render the frame
     m_deviceHandler->drawFrame(m_primaryCommandBuffer);
     // reset all of the variables so we can start and handle the next frame
@@ -146,7 +180,7 @@ bool VulkanRenderer::load2dVertexBuffer(const std::string& pathToFile, VkBuffer&
 {
     auto vertices = load2dVertexFile(pathToFile);
 
-    return createDeviceBuffer(pathToFile, buffer, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, bufferMemory, sizeof(vertices[0]) * vertices.size(), vertices.data());
+    return createAndCopyDataToGPUSideBuffer(buffer, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, bufferMemory, sizeof(vertices[0]) * vertices.size(), vertices.data());
 }
 
 bool VulkanRenderer::loadIndexBuffer(const std::string& pathToFile, VkBuffer& buffer, VkDeviceMemory& bufferMemory, int& size)
@@ -154,5 +188,5 @@ bool VulkanRenderer::loadIndexBuffer(const std::string& pathToFile, VkBuffer& bu
     auto vertices = loadIndexFile(pathToFile);
     size = vertices.size();
 
-    return createDeviceBuffer(pathToFile, buffer, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, bufferMemory, sizeof(vertices[0]) * vertices.size(), vertices.data());
+    return createAndCopyDataToGPUSideBuffer(buffer, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, bufferMemory, sizeof(vertices[0]) * vertices.size(), vertices.data());
 }
