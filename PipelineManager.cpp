@@ -8,30 +8,22 @@ PipelineManager::PipelineManager(DeviceHandler *de)
 {
     m_logicalDevice = m_deviceHandler->getLogicalDevice();
     m_checkVkResult = std::bind(&DeviceHandler::checkVkResult, m_deviceHandler, std::placeholders::_1);
+
+    createBaseDescriptorSetLayouts();
+    createBasePipelineLayouts();
 }
 
 PipelineManager::~PipelineManager()
 {
-    for (auto& [key, value]: m_descriptorDatas)
-    {
-        for (auto& bufferMem: value.bufferMemory)
-        { vkUnmapMemory(m_logicalDevice, bufferMem); }
-        for (auto& buffer: value.buffer)
-        { vkDestroyBuffer(m_logicalDevice, buffer, VK_NULL_HANDLE); }
-        for (auto& bufferMem: value.bufferMemory)
-        { vkFreeMemory(m_logicalDevice, bufferMem, VK_NULL_HANDLE); }
-        vkDestroyDescriptorSetLayout(m_logicalDevice, value.setLayout, nullptr);
-    }
-    vkDestroyDescriptorPool(m_logicalDevice, m_descriptorPool, nullptr);
     for (auto& [key, value]: m_pipelines)
     { vkDestroyPipeline(m_logicalDevice, value.pipeline, nullptr); }
-    for (auto& [key, value]: m_pipelineLayouts)
-    { vkDestroyPipelineLayout(m_logicalDevice, value.layout, nullptr); }
-}
-
-void PipelineManager::updateDescriptorCreateInfos(const std::string& name, const std::vector<descriptorCreateInfo>& newCreateInfos)
-{
-    m_descriptorCreateInfos.insert({name, newCreateInfos});
+    for (auto& [key, value]: m_pipelineLayout)
+    { vkDestroyPipelineLayout(m_logicalDevice, value, nullptr); }
+    for (auto& [key, value]: m_descriptorLayouts)
+    {
+        vkDestroyDescriptorPool(m_logicalDevice, value.allocInfo.descriptorPool, nullptr);
+        vkDestroyDescriptorSetLayout(m_logicalDevice, value.layout, VK_NULL_HANDLE);
+    }
 }
 
 void PipelineManager::addVertexDataToPipeline(const std::string& vertexName, const std::string& pipelineName)
@@ -43,6 +35,11 @@ void PipelineManager::addVertexDataToPipeline(const std::string& vertexName, con
     {
         vertexData = new VERTEX::baseRectangle();
         Logger::Instance()->logVerbose("addVertexDataToPipeline 3");
+    }
+    else if (vertexName == "shape2d")
+    {
+        vertexData = new VERTEX::shape2dwithtexture();
+        Logger::Instance()->logVerbose("addVertexDataToPipeline 3.5");
     }
     else
     {
@@ -142,7 +139,8 @@ pipelineInfo &PipelineManager::addBaseGraphicsPipelineCreateInfo(const std::stri
     return m_pipelines[name];
 }
 
-void PipelineManager::createGraphicsPipeline(
+VkPipelineLayout& PipelineManager::createGraphicsPipeline(
+    VkPipeline& newPipeline,
     const std::string& name,
     const std::string& pipelineLayoutName,
     const std::string& vertPath,
@@ -153,7 +151,7 @@ void PipelineManager::createGraphicsPipeline(
     if (m_pipelines.find(name) == m_pipelines.end())
     {
         Logger::Instance()->logCritical("PipelineManager cannot find basegraphicspipeline, so we cannot create this pipeline: " + name);
-        return;
+        throw;
     }
 
     VkShaderModule vertShader = createShaderModule(vertPath);
@@ -184,12 +182,10 @@ void PipelineManager::createGraphicsPipeline(
     createInfo.pDynamicState = &m_pipelines[name].dynamicStateCreateInfo;
     createInfo.stageCount = (uint32_t)m_pipelines[name].shaderStages.size();
     createInfo.pStages = m_pipelines[name].shaderStages.data();
-    createInfo.layout = m_pipelineLayouts[pipelineLayoutName].layout;
+    createInfo.layout = m_pipelineLayout[pipelineLayoutName];
     createInfo.renderPass = m_deviceHandler->getRenderPass();
     createInfo.subpass = 0;
     createInfo.basePipelineHandle = VK_NULL_HANDLE;
-
-    VkPipeline newPipeline{VK_NULL_HANDLE};
 
     m_checkVkResult(vkCreateGraphicsPipelines(m_logicalDevice, VK_NULL_HANDLE, 1, &createInfo, VK_NULL_HANDLE, &newPipeline));
     m_pipelines[name].pipeline = newPipeline;
@@ -198,181 +194,8 @@ void PipelineManager::createGraphicsPipeline(
     vkDestroyShaderModule(m_logicalDevice, vertShader, nullptr);
     vkDestroyShaderModule(m_logicalDevice, fragShader, nullptr);
     Logger::Instance()->logError("createGraphicsPipeline: 2");
-}
 
-pipelineLayoutInfo &PipelineManager::addVec4PushConstantPipelineLayout(const std::string &name)
-{
-    Logger::Instance()->logError("addVec4PushConstantPipelineLayout: 1");
-    if (m_pipelineLayouts.find(name) == m_pipelineLayouts.end())
-        m_pipelineLayouts.insert({name, pipelineLayoutInfo{}});
-
-    m_pipelineLayouts[name].layoutCreateInfo.pushConstantRangeCount = 2;
-    // GOODTOKNOW: you need separate VkPushConstantRange-s for every shader stage
-    // you cannot ORd up the two shaders in one stageFlags; or use VK_SHADER_STAGE_ALL_GRAPHICS
-    VkPushConstantRange pushCV;
-    pushCV.size = sizeof(vec4PC);
-    pushCV.offset = 0;
-    pushCV.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    VkPushConstantRange pushCF;
-    pushCF.size = sizeof(vec4PC);
-    pushCF.offset = sizeof(vec4PC);
-    pushCF.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-    std::vector<VkPushConstantRange> range = {pushCV, pushCF};
-    m_pipelineLayouts[name].layoutCreateInfo.pPushConstantRanges = range.data();
-
-    Logger::Instance()->logError("addVec4PushConstantPipelineLayout: 2");
-    return m_pipelineLayouts[name];
-}
-
-pipelineLayoutInfo &PipelineManager::addDescriptorSetToPipelineLayout(const std::string &descriptorSetName, const std::string &pipelineLayoutName)
-{
-    Logger::Instance()->logError("addDescriptorSetToPipelineLayout: 1");
-    if (m_descriptorDatas.find(descriptorSetName) == m_descriptorDatas.end())
-        throw std::out_of_range("PipelineManager: cannot find desciptorSet: " + descriptorSetName);
-    if (m_pipelineLayouts.find(pipelineLayoutName) == m_pipelineLayouts.end())
-        m_pipelineLayouts.insert({pipelineLayoutName, pipelineLayoutInfo{}});
-
-    m_pipelineLayouts[pipelineLayoutName].layouts.push_back(m_descriptorDatas[descriptorSetName].setLayout);
-    m_pipelineLayouts[pipelineLayoutName].layoutCreateInfo.setLayoutCount = (uint32_t)m_pipelineLayouts[pipelineLayoutName].layouts.size();
-    m_pipelineLayouts[pipelineLayoutName].layoutCreateInfo.pSetLayouts = m_pipelineLayouts[pipelineLayoutName].layouts.data();
-    Logger::Instance()->logError("addDescriptorSetToPipelineLayout: 2");
-
-    return m_pipelineLayouts[pipelineLayoutName];
-}
-
-void PipelineManager::initDescriptorConfig()
-{
-    Logger::Instance()->logError("initDescriptorSet: 1");
-    //TODO: if we have multiple UBOs we have to store the offsets and use them in the update function
-    uint8_t uboCount{0};
-    for (auto& [key, value]: m_descriptorCreateInfos)
-    {
-        Logger::Instance()->logError("initDescriptorSet: 2");
-        descriptorData finalData{};
-        finalData.buffer.resize(value.size(), VkBuffer{});
-        finalData.bufferMemory.resize(value.size(), VkDeviceMemory{});
-        finalData.bufferMemoryAddress.resize(value.size(), VK_NULL_HANDLE);
-
-        // create all of the descriptors binding
-        std::vector<VkDescriptorSetLayoutBinding> bindings;
-        for (size_t i = 0; i < value.size(); i++)
-        {
-            Logger::Instance()->logError("initDescriptorSet: 3");
-            VkDescriptorSetLayoutBinding layoutBinding{};
-            layoutBinding.binding = (uint32_t)i;
-            layoutBinding.descriptorCount = 1;
-            layoutBinding.descriptorType = value[i].type;
-            layoutBinding.stageFlags = value[i].shaderStageFlags;
-            bindings.push_back(layoutBinding);
-            if (value[i].type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
-            {
-                Logger::Instance()->logError("initDescriptorSet: 4");
-                uboCount += value[i].numberOfMaxSets;
-                // create the buffer memory part if we have a uniformbuffer
-                m_deviceHandler->createBuffer(
-                    value[i].bufferSize,
-                    VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                    finalData.buffer[i],
-                    finalData.bufferMemory[i]
-                    );
-                m_checkVkResult(vkMapMemory(
-                    m_logicalDevice,
-                    finalData.bufferMemory[i],
-                    0,
-                    value[i].bufferSize,
-                    0,
-                    &finalData.bufferMemoryAddress[i]
-                    ));
-            }
-        }
-        Logger::Instance()->logError("initDescriptorSet: 5");
-        VkDescriptorSetLayoutCreateInfo layoutInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
-        layoutInfo.bindingCount = (uint32_t)bindings.size();
-        layoutInfo.pBindings = bindings.data();
-
-        // create the descriptorsetlayout from the bindings and store it in the map
-        m_checkVkResult(vkCreateDescriptorSetLayout(m_logicalDevice, &layoutInfo, VK_NULL_HANDLE, &finalData.setLayout));
-        m_descriptorDatas.insert({key, finalData});
-    }
-    Logger::Instance()->logError("initDescriptorSet: 6");
-    std::vector<VkDescriptorPoolSize> poolSizes;
-
-    // ubo part
-    VkDescriptorPoolSize uboPoolSize{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER};
-    uboPoolSize.descriptorCount = (uint32_t)uboCount;
-    poolSizes.push_back(uboPoolSize);
-
-    // create the pool
-    VkDescriptorPoolCreateInfo poolInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
-    poolInfo.poolSizeCount = (uint32_t)poolSizes.size();
-    poolInfo.pPoolSizes = poolSizes.data();
-    poolInfo.maxSets = 20;//this is hardcoded here; maybe change later if needed
-
-    m_checkVkResult(vkCreateDescriptorPool(m_logicalDevice, &poolInfo, VK_NULL_HANDLE, &m_descriptorPool));
-    Logger::Instance()->logError("initDescriptorSet: 7");
-    for (auto& [key, value]: m_descriptorDatas)
-    {
-        Logger::Instance()->logError("initDescriptorSet: 8");
-        VkDescriptorSetAllocateInfo allocInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
-        allocInfo.descriptorPool = m_descriptorPool;
-        allocInfo.descriptorSetCount = 1;
-        allocInfo.pSetLayouts = &value.setLayout;
-
-        m_checkVkResult(vkAllocateDescriptorSets(m_logicalDevice, &allocInfo, &value.set));
-
-        // update the descriptorset with the real memory objects
-        std::vector<VkWriteDescriptorSet> descriptorWrites;
-        for (size_t i = 0; i < value.buffer.size(); i++)
-        {
-            Logger::Instance()->logError("initDescriptorSet: 9");
-            VkWriteDescriptorSet descriptorWrite{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-            descriptorWrite.dstBinding = (uint32_t)i;
-            descriptorWrite.dstSet = value.set;
-            descriptorWrite.dstArrayElement = 0;
-            descriptorWrite.descriptorType = m_descriptorCreateInfos[key][i].type;
-            descriptorWrite.descriptorCount = 1;
-            descriptorWrite.pBufferInfo = VK_NULL_HANDLE;
-            descriptorWrite.pImageInfo  = VK_NULL_HANDLE;
-            descriptorWrite.pTexelBufferView  = VK_NULL_HANDLE;
-
-            if(m_descriptorCreateInfos[key][i].type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
-            {
-                Logger::Instance()->logError("initDescriptorSet: 10");
-                VkDescriptorBufferInfo bufferInfo{};
-                bufferInfo.buffer = value.buffer[i];
-                bufferInfo.offset = 0;
-                bufferInfo.range = m_descriptorCreateInfos[key][i].bufferSize;
-                descriptorWrite.pBufferInfo = &bufferInfo;
-            }
-            descriptorWrites.push_back(descriptorWrite);
-        }
-        vkUpdateDescriptorSets(m_logicalDevice, (uint32_t)descriptorWrites.size(), descriptorWrites.data(), 0, VK_NULL_HANDLE);
-        Logger::Instance()->logError("initDescriptorSet: 11");
-    }
-    Logger::Instance()->logError("initDescriptorSet: 12");
-}
-
-void PipelineManager::createPipelineLayout(const std::string& name)
-{
-    Logger::Instance()->logError("createPipelineLayout: 1");
-    if (m_pipelineLayouts.find(name) == m_pipelineLayouts.end())
-    {
-        Logger::Instance()->logCritical("PipelineManager cannot find basePipelineLayout, so we cannot create this pipelineLayout: " + name);
-        return;
-    }
-    m_checkVkResult(vkCreatePipelineLayout(
-        m_logicalDevice,
-        &m_pipelineLayouts[name].layoutCreateInfo,
-        VK_NULL_HANDLE,
-        &m_pipelineLayouts[name].layout
-        ));
-    Logger::Instance()->logError("createPipelineLayout: 2");
-}
-
-void PipelineManager::updateUbo(rectangleUboData &newUbo, const std::string& descriptorName, uint32_t binding)
-{
-    memcpy(m_descriptorDatas[descriptorName].bufferMemoryAddress[binding], &newUbo, sizeof(newUbo));
+    return m_pipelineLayout[pipelineLayoutName];
 }
 
 std::vector<char> PipelineManager::readFile(const std::string& path) {
@@ -406,4 +229,146 @@ VkShaderModule PipelineManager::createShaderModule(const std::string& path)
     m_checkVkResult(vkCreateShaderModule(m_logicalDevice, &createInfo, nullptr, &res));
 
     return res;
+}
+
+// this is the new code for a more hardcoded pipeline and descriptorset creation
+void PipelineManager::createBaseDescriptorSetLayouts()
+{
+    //ubo part
+    m_descriptorLayouts.insert({"ubo0vertex", descriptorLayoutInfo{}});
+
+    VkDescriptorSetLayoutBinding ubo0VertexBinding{};
+    ubo0VertexBinding.binding = 0;
+    ubo0VertexBinding.descriptorCount = 1;
+    ubo0VertexBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    ubo0VertexBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+    VkDescriptorSetLayoutCreateInfo ubo0vertexCreateInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
+    ubo0vertexCreateInfo.bindingCount = 1;
+    ubo0vertexCreateInfo.pBindings = &ubo0VertexBinding;
+
+    m_checkVkResult(vkCreateDescriptorSetLayout(m_logicalDevice, &ubo0vertexCreateInfo, VK_NULL_HANDLE, &m_descriptorLayouts["ubo0vertex"].layout));
+
+    VkDescriptorPoolSize uboPoolSize{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER};
+    uboPoolSize.descriptorCount = 1;
+    VkDescriptorPoolCreateInfo ubopoolCreateInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
+    ubopoolCreateInfo.poolSizeCount = 1;
+    ubopoolCreateInfo.pPoolSizes = &uboPoolSize;
+    ubopoolCreateInfo.maxSets = 5U;//this is hardcoded here; maybe change later if needed
+
+    VkDescriptorPool uboPool;
+    m_checkVkResult(vkCreateDescriptorPool(m_logicalDevice, &ubopoolCreateInfo, VK_NULL_HANDLE, &uboPool));
+
+    m_descriptorLayouts["ubo0vertex"].allocInfo.descriptorPool = uboPool;
+    m_descriptorLayouts["ubo0vertex"].allocInfo.descriptorSetCount = 1;
+    m_descriptorLayouts["ubo0vertex"].allocInfo.pSetLayouts = &m_descriptorLayouts["ubo0vertex"].layout;
+
+    //combined sampler part
+    m_descriptorLayouts.insert({"sampler1fragment", descriptorLayoutInfo{}});
+    
+    VkDescriptorSetLayoutBinding sampler1FragmentBinding{};
+    sampler1FragmentBinding.binding = 1;
+    sampler1FragmentBinding.descriptorCount = 1;
+    sampler1FragmentBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    sampler1FragmentBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    VkDescriptorSetLayoutCreateInfo sampler1fragmentCreateInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
+    sampler1fragmentCreateInfo.bindingCount = 1;
+    sampler1fragmentCreateInfo.pBindings = &sampler1FragmentBinding;
+
+    m_checkVkResult(vkCreateDescriptorSetLayout(m_logicalDevice, &sampler1fragmentCreateInfo, VK_NULL_HANDLE, &m_descriptorLayouts["sampler1fragment"].layout));
+
+    VkDescriptorPoolSize samplerPoolSize{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER};
+    samplerPoolSize.descriptorCount = 1;
+    VkDescriptorPoolCreateInfo samplerpoolCreateInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
+    samplerpoolCreateInfo.poolSizeCount = 1;
+    samplerpoolCreateInfo.pPoolSizes = &samplerPoolSize;
+    samplerpoolCreateInfo.maxSets = 50U;//this is hardcoded here; maybe change later if needed
+
+    VkDescriptorPool samplerPool;
+    m_checkVkResult(vkCreateDescriptorPool(m_logicalDevice, &samplerpoolCreateInfo, VK_NULL_HANDLE, &samplerPool));
+
+    m_descriptorLayouts["sampler1fragment"].allocInfo.descriptorPool = samplerPool;
+    m_descriptorLayouts["sampler1fragment"].allocInfo.descriptorSetCount = 1;
+    m_descriptorLayouts["sampler1fragment"].allocInfo.pSetLayouts = &m_descriptorLayouts["sampler1fragment"].layout;
+}
+
+void PipelineManager::createUBODescriptorSet(VkDescriptorSet& setToCreate, VkBuffer& buffer, VkDeviceSize offset, VkDeviceSize range)
+{
+    m_checkVkResult(vkAllocateDescriptorSets(m_logicalDevice, &m_descriptorLayouts["ubo0vertex"].allocInfo, &setToCreate));
+
+    VkWriteDescriptorSet descriptorWrite{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+    descriptorWrite.dstBinding = 0;
+    descriptorWrite.dstSet = setToCreate;
+    descriptorWrite.dstArrayElement = 0;
+    descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    descriptorWrite.descriptorCount = 1;
+    descriptorWrite.pImageInfo  = VK_NULL_HANDLE;
+    descriptorWrite.pTexelBufferView  = VK_NULL_HANDLE;
+
+    VkDescriptorBufferInfo bufferInfo{};
+    bufferInfo.buffer = buffer;
+    bufferInfo.offset = offset;
+    bufferInfo.range = range;
+
+    descriptorWrite.pBufferInfo = &bufferInfo;
+
+    vkUpdateDescriptorSets(m_logicalDevice, 1, &descriptorWrite, 0, VK_NULL_HANDLE);
+}
+
+void PipelineManager::createSamplerDescriptorSet(VkDescriptorSet& setToCreate, VkImageView& imageView)
+{
+    m_checkVkResult(vkAllocateDescriptorSets(m_logicalDevice, &m_descriptorLayouts["sampler1fragment"].allocInfo, &setToCreate));
+
+    VkWriteDescriptorSet descriptorWrite{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+    descriptorWrite.dstBinding = 1;
+    descriptorWrite.dstSet = setToCreate;
+    descriptorWrite.dstArrayElement = 0;
+    descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    descriptorWrite.descriptorCount = 1;
+    descriptorWrite.pBufferInfo = VK_NULL_HANDLE;
+    descriptorWrite.pTexelBufferView  = VK_NULL_HANDLE;
+
+    VkDescriptorImageInfo imageInfo{};
+    imageInfo.sampler = m_deviceHandler->getSampler();
+    imageInfo.imageView = imageView;
+    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    descriptorWrite.pImageInfo  = &imageInfo;
+
+    vkUpdateDescriptorSets(m_logicalDevice, 1, &descriptorWrite, 0, VK_NULL_HANDLE);
+}
+
+void PipelineManager::createBasePipelineLayouts()
+{
+    VkPipelineLayoutCreateInfo layoutCreateInfo{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
+
+    std::vector<VkDescriptorSetLayout> layouts;
+    layouts.push_back(m_descriptorLayouts["ubo0vertex"].layout);
+    layoutCreateInfo.setLayoutCount = (uint32_t)layouts.size();
+    layoutCreateInfo.pSetLayouts = layouts.data();
+
+    VkPipelineLayout uboLayout{};
+    m_checkVkResult(vkCreatePipelineLayout(
+    m_logicalDevice,
+    &layoutCreateInfo,
+    VK_NULL_HANDLE,
+    &uboLayout
+    ));
+
+    m_pipelineLayout.insert({"ubo0", uboLayout});
+
+    layouts.push_back(m_descriptorLayouts["sampler1fragment"].layout);
+    layoutCreateInfo.setLayoutCount = (uint32_t)layouts.size();
+    layoutCreateInfo.pSetLayouts = layouts.data();
+
+    VkPipelineLayout ubosamplerLayout{};
+    m_checkVkResult(vkCreatePipelineLayout(
+    m_logicalDevice,
+    &layoutCreateInfo,
+    VK_NULL_HANDLE,
+    &ubosamplerLayout
+    ));
+
+    m_pipelineLayout.insert({"ubo0sampler1", ubosamplerLayout});
 }

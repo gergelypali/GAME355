@@ -7,6 +7,9 @@
 #include "Vector.h"
 #include <memory>
 #include <map>
+#include "Structs.h"
+
+using textureData = TEXTURE::textureData;
 
 class DeviceHandler;
 class PipelineManager;
@@ -35,7 +38,7 @@ private:
 
     bool createAndCopyDataToGPUSideBuffer(VkBuffer& buffer, VkBufferUsageFlags flags, VkDeviceMemory& bufferMemory, VkDeviceSize size, void* dataPointer);
     bool createAndCopyDataToCPUSideBuffer(VkBuffer& buffer, VkBufferUsageFlags flags, VkDeviceMemory& bufferMemory, VkDeviceSize size, void* dataPointer);
-    std::vector<MATH::Vec2> load2dVertexFile(const std::string& pathToFile);
+    std::vector<MATH::Vec4> load2dVertexFile(const std::string& pathToFile);
     std::vector<uint32_t> loadIndexFile(const std::string& pathToFile);
 
 public:
@@ -51,9 +54,24 @@ public:
     void drawFrame();
     void vulkanRenderRect(const MATH::Vec2& position, const MATH::Vec2& size, const MATH::Vec4& color);//this will just update the command buffer with the new commands
     void vulkanRenderShape2d(const std::string& nameVertex, const std::string &nameIndex, const MATH::Vec2& position, const MATH::Vec2& size, MATH::Vec4& color, VkBuffer& vertexBuffer, VkBuffer& indexBuffer, int indexCount);
+    void vulkanRenderShape2dWithTexture(
+        const std::string& nameVertex,
+        const std::string &nameIndex,
+        const std::string &nameTexture,
+        const MATH::Vec2& position,
+        const MATH::Vec2& size,
+        VkDescriptorSet& set,
+        VkBuffer& vertexBuffer,
+        VkBuffer& indexBuffer,
+        int indexCount
+        );
 
     bool load2dVertexBuffer(const std::string& pathToFile, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
     bool loadIndexBuffer(const std::string& pathToFile, VkBuffer& buffer, VkDeviceMemory& bufferMemory, int& size);
+    void freeBuffer(VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+
+    void loadTexture(textureData& textureData, void* pixelData, int size, uint32_t w, uint32_t h);
+    void destroyImage(VkImage& image, VkDeviceMemory& imageMemory, VkImageView& imageView);
 };
 
 #endif

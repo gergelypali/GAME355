@@ -59,6 +59,7 @@ private:
     VkFence m_renderFinishedFence;
     uint32_t m_currentImageIndex{0};
     VkRenderPass m_renderPass{};
+    VkSampler m_sampler;
 
     bool IsExtensionSupported(const std::vector<VkExtensionProperties>& supportedExtensions, const char* extension);
 
@@ -73,6 +74,7 @@ private:
     void createCommandPool();
     void recordCommand(VkCommandBuffer buffer, uint32_t imageIndex);
     void createSyncObjects();
+    void createTextureSampler();
 
     // debugging part
     PFN_vkCreateDebugUtilsMessengerEXT CreateDebugUtilsMessengerEXT;
@@ -108,12 +110,21 @@ public:
     void createCommandBuffer(VkCommandBuffer& buffer, VkCommandBufferLevel level);
     void createCommandBuffer(std::vector<VkCommandBuffer>& buffer, VkCommandBufferLevel level);
     void recordRenderPrimaryCommandBuffer(VkCommandBuffer& buffer, std::vector<VkCommandBuffer>& secBuffers);
-    void recordRenderSecondaryCommandBufferStart(VkCommandBuffer& buffer, const VkPipeline& pipeline);
-    void recordEndCommandBuffer(VkCommandBuffer& buffer);
+    void recordRenderSecondaryCommandBufferStart(VkCommandBuffer& buffer);
     void recordOneTimerCommandBufferStart(VkCommandBuffer& buffer);
+    void recordEndCommandBuffer(VkCommandBuffer& buffer);
+    void submitAndDeleteCommandBuffer(VkCommandBuffer& buffer);
     void copyBufferToGPU(VkBuffer& sourceBuffer, VkBuffer& destinationBuffer, VkDeviceSize& size);
 
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+    void destroyBuffer(VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+
+    void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
+    void destroyImage(VkImage& image, VkDeviceMemory& imageMemory);
+    void changeImageLayout(VkImage& image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, VkAccessFlags srcMask, VkAccessFlags dstMask, VkPipelineStageFlags sourceFlags, VkPipelineStageFlags destFlags);
+    void copyBufferToImage(VkBuffer& buffer, VkImage& image, uint32_t width, uint32_t height);
+    void createImageView(VkImageView& imageView, VkImage& image, VkFormat format, VkImageAspectFlags aspectFlags);
+    void destroyImageView(VkImageView& imageView);
 
     SDL_Window* getWindow() { return m_window; };
     VkExtent2D &getWindowSize() { return m_info.physicalDeviceSurfaceCapabilities.currentExtent; };
@@ -125,6 +136,7 @@ public:
     VkQueue getGraphicsQueue() { return m_graphicsQueue; };
     VkQueue getPresentQueue() { return m_presentQueue; };
     VkRenderPass &getRenderPass() { return m_renderPass; };
+    VkSampler &getSampler() { return m_sampler; };
 };
 
 #endif

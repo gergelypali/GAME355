@@ -16,19 +16,21 @@ void VulkanScene1::init()
 
     m_map = m_em->addEntity("map");
     m_map->addComponent<CTransform>(MATH::Vec2{windowX/2, windowY/2});
-    m_map->addComponent<CRectBody>(windowX/2, windowY/2, MATH::Vec4{1.f, 0.f, 1.f, 0.f});
+    m_map->addComponent<CRectBody>(windowX, windowY, MATH::Vec4{1.f, 0.f, 1.f, 0.f});
     m_map->addComponent<CState>();
     m_map->addComponent<CAABB>(windowX, windowY);
     m_map->addComponent<CShape2d>("rectangleVertex", "newformIndex");
+    m_map->addComponent<CTexture>("brick");
 
     m_player = m_em->addEntity("Player");
 
-    int playerWidth{40}, playerHeight{40};
+    int playerWidth{100}, playerHeight{100};
     m_player->addComponent<CTransform>(MATH::Vec2{300.f, 200.f}, MATH::Vec2(0.f, 0.f), 0, 90, 300);
     m_player->addComponent<CRectBody>(playerWidth, playerHeight, MATH::Vec4{0.f, 0.f, 1.f, 0.f});
     m_player->addComponent<CState>();
     m_player->addComponent<CAABB>(playerWidth, playerHeight);
     m_player->addComponent<CShape2d>("rectangleVertex", "triangleIndex");
+    m_player->addComponent<CTexture>("steam");
 }
 
 void VulkanScene1::endScene()
@@ -139,8 +141,9 @@ void VulkanScene1::spawnEnemy(const float& x, const float& y)
 {
     auto enemy = m_em->addEntity("Enemy");
     enemy->addComponent<CTransform>(MATH::Vec2{x, y}, MATH::Vec2(1.f, 1.f), 0, 90, 5);
-    enemy->addComponent<CRectBody>(20, 20, MATH::Vec4{1.f, 0.f, 0.f, 0.f});
+    enemy->addComponent<CRectBody>(40, 40, MATH::Vec4{1.f, 0.f, 0.f, 0.f});
     enemy->addComponent<CState>(false, true);
-    enemy->addComponent<CAABB>(20, 20);
+    enemy->addComponent<CAABB>(40, 40);
     enemy->addComponent<CShape2d>("rectangleVertex", "rectangleIndex");
+    enemy->addComponent<CTexture>("plane");
 }

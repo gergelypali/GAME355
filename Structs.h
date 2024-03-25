@@ -46,6 +46,48 @@ namespace VERTEX
             return res;
         }
     };
+
+    struct shape2dwithtexture : baseVertex
+    {
+        MATH::Vec2 position{};
+        MATH::Vec2 texPos{};
+
+        std::vector<VkVertexInputBindingDescription> getBindingDescriptor() override
+        {
+            std::vector<VkVertexInputBindingDescription> res{};
+
+            VkVertexInputBindingDescription binding0{};
+            binding0.binding = 0;
+            binding0.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+            binding0.stride = sizeof(position) + sizeof(texPos);
+
+            res.push_back(binding0);
+
+            return res;
+        }
+        std::vector<VkVertexInputAttributeDescription> getAttributeDescriptor() override
+        {
+            std::vector<VkVertexInputAttributeDescription> res{};
+
+            VkVertexInputAttributeDescription input0{};
+            input0.binding = 0;
+            input0.location = 0;
+            input0.format = VK_FORMAT_R32G32_SFLOAT;
+            input0.offset = 0;
+
+            res.push_back(input0);
+
+            VkVertexInputAttributeDescription input1{};
+            input1.binding = 0;
+            input1.location = 1;
+            input1.format = VK_FORMAT_R32G32_SFLOAT;
+            input1.offset = sizeof(position);
+
+            res.push_back(input1);
+
+            return res;
+        }
+    };
 }
 
 namespace PIPELINE
@@ -72,19 +114,10 @@ namespace PIPELINE
         VkPipeline pipeline;
     };
 
-    struct pipelineLayoutInfo
+    struct descriptorLayoutInfo
     {
-        VkPipelineLayoutCreateInfo layoutCreateInfo{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
-        VkPipelineLayout layout;
-        std::vector<VkDescriptorSetLayout> layouts;
-    };
-
-    struct descriptorCreateInfo
-    {
-        VkDescriptorType type;
-        VkShaderStageFlags shaderStageFlags;
-        VkDeviceSize bufferSize;
-        uint8_t numberOfMaxSets{0};
+        VkDescriptorSetLayout layout{};
+        VkDescriptorSetAllocateInfo allocInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
     };
 }
 
@@ -92,7 +125,7 @@ namespace BUFFER
 {
     struct vec4PushConstant
     {
-        MATH::Vec4 vector;
+        MATH::Vec4 vector{};
     };
 
     // uniform buffer struct
@@ -101,16 +134,21 @@ namespace BUFFER
         MATH::Vec4 vector[1000];
     };
 
-    struct rectangleUboData
-    {
-        MATH::Vec4 positionAndSize[1000];
-        MATH::Vec4 color[1000];
-    };
-
     struct shape2dUboData
     {
         MATH::Vec4 positionAndSize[1000];
         MATH::Vec4 color[1000];
+    };
+}
+
+namespace TEXTURE
+{
+    struct textureData
+    {
+        VkImage image{};
+        VkDeviceMemory imageMemory{};
+        VkImageView imageView{};
+        VkDescriptorSet set{};
     };
 }
 

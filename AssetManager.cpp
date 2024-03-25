@@ -2,6 +2,7 @@
 #include "GameEngine.h"
 #include "Animation.h"
 #include "VulkanRenderer.h"
+#include "Logger.h"
 
 #include <SDL.h>
 #include <SDL_image.h>
@@ -12,6 +13,10 @@ AssetManager::AssetManager(GameEngine* ge)
     m_ge = ge;
 
     // hardcode the assets we are going to load and stuff
+    AddTexture("steam", "textures/steam_logo.png");
+    AddTexture("plane", "textures/red_plane.png");
+    AddTexture("brick", "textures/brick_bg.png");
+    /*
     AddTexture("spriteStackPurpleCar", "textures/PurpleCar.png");
     AddTexture("spriteStackRedMotorcycle", "textures/RedMotorcycle.png");
     AddTexture("spriteStackGreenBigCar", "textures/GreenBigCar.png");
@@ -23,7 +28,6 @@ AssetManager::AssetManager(GameEngine* ge)
     AddTexture("spriteStackRedCar", "textures/RedCar.png");
     AddTexture("characters", "textures/characters.png");
     AddTexture("roadParts", "textures/roads.png");
-    AddTexture("menuBG", "textures/menuBG.jpg");
     AddTexture("startGameButton", "textures/newGameButtonText.png");
     AddTexture("startGameButtonAnim", "textures/newGameButtonAnim.png");
     AddTexture("exitGameButton", "textures/exitGameButtonText.png");
@@ -31,7 +35,9 @@ AssetManager::AssetManager(GameEngine* ge)
     AddTexture("retryGameButtonAnim", "textures/retryGameButtonAnim.png");
     AddTexture("arachnoid", "textures/Arachnoid.png");
     AddTexture("house1", "textures/TallBuilding01.png");
+    AddTexture("menuBG", "textures/menuBG.jpg");
     AddTexture("cityBG", "textures/cityBG.jpg");
+    */
 
     // and animations
     AddAnimation("walkDown", 150, std::vector<std::pair<int,int>>{std::pair{0, 0}, std::pair{0, 1}, std::pair{0, 2}, std::pair{0, 3}});
@@ -88,21 +94,56 @@ AssetManager::~AssetManager()
         val = nullptr;
     }
     m_fonts.clear();
-    // TODO: clear up the vkbuffer and vkdevicememory
+    for (auto& [key, val]: m_vertexBuffers)
+    {
+        m_ge->vulkanRenderer()->freeBuffer(val.buffer, val.bufferMemory);
+    }
+    m_vertexBuffers.clear();
+    for (auto& [key, val]: m_indexBuffers)
+    {
+        m_ge->vulkanRenderer()->freeBuffer(val.buffer, val.bufferMemory);
+    }
+    m_indexBuffers.clear();
+    for (auto& [key, val]: m_vulkanTextures)
+    {
+        m_ge->vulkanRenderer()->destroyImage(val.image, val.imageMemory, val.imageView);
+    }
+    m_vulkanTextures.clear();
 }
 
 void AssetManager::AddTexture(const std::string &name, const std::string &pathToFile)
 {
-    /* temp remove the code; we need to change this to be compatible with Vulkan
-    SDL_Texture* textureToAdd{nullptr};
-    textureToAdd = IMG_LoadTexture(m_ge->renderer(), pathToFile.c_str());
-    if (!textureToAdd)
+    if (m_ge->isSDL())
     {
-        printf("IMG_LoadTexture failed! Cannot load image from: %s\nWith SDL_Error: %s\n", pathToFile.c_str(), SDL_GetError());
-        return;
+        SDL_Texture* textureToAdd{nullptr};
+        textureToAdd = IMG_LoadTexture(m_ge->renderer(), pathToFile.c_str());
+        if (!textureToAdd)
+        {
+            printf("IMG_LoadTexture failed! Cannot load image from: %s\nWith SDL_Error: %s\n", pathToFile.c_str(), SDL_GetError());
+            return;
+        }
+        m_textures.insert({name, textureToAdd});
     }
-    m_textures.insert({name, textureToAdd});
-    */
+    else
+    {
+        textureData textureToAdd{};
+
+        void* pixels{nullptr};
+        SDL_Surface* image = IMG_Load(pathToFile.c_str());
+        pixels = image->pixels;
+        int size = image->h * image->pitch;// in bytes
+
+        if(!pixels)
+        {
+            Logger::Instance()->logError("AssetManager: cannot load texture to vulkanTexture: " + pathToFile);
+            return;
+        }
+
+        m_ge->vulkanRenderer()->loadTexture(textureToAdd, pixels, size, image->w, image->h);
+
+        m_vulkanTextures.insert({name, textureToAdd});
+        SDL_FreeSurface(image);
+    }
 }
 
 void AssetManager::AddAnimation(const std::string &name, int animSpeed, const std::vector<std::pair<int, int>> &sequence)
@@ -138,6 +179,11 @@ void AssetManager::AddMusic(const std::string &name, const std::string &pathToFi
 SDL_Texture* AssetManager::GetTexture(const std::string &name)
 {
     return m_textures[name];
+}
+
+VkDescriptorSet &AssetManager::GetVulkanTexture(const std::string &name)
+{
+    return m_vulkanTextures[name].set;
 }
 
 std::shared_ptr<Animation> AssetManager::GetAnimation(const std::string &name)

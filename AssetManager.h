@@ -9,6 +9,9 @@
 #include <SDL_mixer.h>
 #include <SDL_ttf.h>
 #include <vulkan/vulkan.h>
+#include "Structs.h"
+
+using textureData = TEXTURE::textureData;
 
 class GameEngine;
 class Animation;
@@ -36,6 +39,7 @@ private:
     std::map<std::string, TTF_Font*> m_fonts;
     std::map<std::string, vulkanBufferData> m_vertexBuffers;
     std::map<std::string, vulkanBufferData> m_indexBuffers;
+    std::map<std::string, textureData> m_vulkanTextures;
 
     int m_initFontSize{50};
 
@@ -62,6 +66,7 @@ public:
     void AddMusic(const std::string& name, const std::string& pathToFile);
 
     SDL_Texture* GetTexture(const std::string& name);
+    VkDescriptorSet& GetVulkanTexture(const std::string& name);
     std::shared_ptr<Animation> GetAnimation(const std::string& name);
     Mix_Chunk* GetSound(const std::string& name);
     Mix_Music* GetMusic(const std::string& name);

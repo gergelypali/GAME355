@@ -80,6 +80,8 @@ void GameEngine::init()
 
 void GameEngine::quit()
 {
+    m_am.reset();
+
     Logger::Instance()->log("GameEngine quit Start");
     for (auto& [key, value] : m_scenes)
     {

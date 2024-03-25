@@ -152,14 +152,39 @@ void Scene::drawTexture(std::shared_ptr<Entity> &entity)
     auto& body = entity->getComponent<CRectBody>();
     auto& texture = entity->getComponent<CTexture>();
 
-    SDL_Rect fillRect{
-        (int)transform.cameraViewPos.x - body.halfWidth(),
-        (int)transform.cameraViewPos.y - body.halfHeight(),
-        body.width(),
-        body.height()
-        };
+    if (m_ge->isSDL())
+    {
+        SDL_Rect fillRect{
+            (int)transform.cameraViewPos.x - body.halfWidth(),
+            (int)transform.cameraViewPos.y - body.halfHeight(),
+            body.width(),
+            body.height()
+            };
 
-    SDL_RenderCopyEx(m_ge->renderer(), m_ge->assetManager()->GetTexture(texture.name), NULL, &fillRect, 0, NULL, SDL_FLIP_NONE);
+        SDL_RenderCopyEx(m_ge->renderer(), m_ge->assetManager()->GetTexture(texture.name), NULL, &fillRect, 0, NULL, SDL_FLIP_NONE);
+    }
+    else
+    {
+        if (!entity->hasComponent<CShape2d>())
+            return;
+
+        auto& shape = entity->getComponent<CShape2d>();
+
+        MATH::Vec2 position{transform.pos.x, transform.pos.y};
+        MATH::Vec2 size{body.halfWidth(), body.halfHeight()};
+
+        m_ge->vulkanRenderer()->vulkanRenderShape2dWithTexture(
+            shape.vertexName,
+            shape.indexName,
+            texture.name,
+            position,
+            size,
+            m_ge->assetManager()->GetVulkanTexture(texture.name),
+            m_ge->assetManager()->GetVertexBuffer(shape.vertexName),
+            m_ge->assetManager()->GetIndexBuffer(shape.indexName),
+            m_ge->assetManager()->GetIndexSize(shape.indexName)
+            );
+    }
 }
 
 void Scene::drawSpriteSet(std::shared_ptr<Entity> &entity)

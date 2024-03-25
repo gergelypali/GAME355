@@ -47,6 +47,8 @@ DeviceHandler::DeviceHandler(SDL_Window* window)
     Logger::Instance()->logVerbose("DeviceHandler createCommandBuffer done");
     createSyncObjects();
     Logger::Instance()->logVerbose("DeviceHandler createSyncObjects done");
+    createTextureSampler();
+    Logger::Instance()->logVerbose("DeviceHandler createTextureSampler done");
     Logger::Instance()->log("DeviceHandler Constructor end");
 }
 
@@ -55,31 +57,33 @@ DeviceHandler::~DeviceHandler()
     Logger::Instance()->log("DeviceHandler Destructor start");
     checkVkResult(vkDeviceWaitIdle(m_logicalDevice));
     Logger::Instance()->logVerbose("DeviceHandler vkDeviceWaitIdle done");
-    vkDestroyFence(m_logicalDevice, m_renderFinishedFence, nullptr);
+    vkDestroySampler(m_logicalDevice, m_sampler, VK_NULL_HANDLE);
+    Logger::Instance()->logVerbose("DeviceHandler vkDestroySampler done");
+    vkDestroyFence(m_logicalDevice, m_renderFinishedFence, VK_NULL_HANDLE);
     Logger::Instance()->logVerbose("DeviceHandler vkDestroyFence done");
-    vkDestroySemaphore(m_logicalDevice, m_renderFinishedSemaphore, nullptr);
+    vkDestroySemaphore(m_logicalDevice, m_renderFinishedSemaphore, VK_NULL_HANDLE);
     Logger::Instance()->logVerbose("DeviceHandler vkDestroySemaphore done");
-    vkDestroySemaphore(m_logicalDevice, m_imageAvailableSemaphore, nullptr);
+    vkDestroySemaphore(m_logicalDevice, m_imageAvailableSemaphore, VK_NULL_HANDLE);
     Logger::Instance()->logVerbose("DeviceHandler vkDestroySemaphore done");
-    vkDestroyCommandPool(m_logicalDevice, m_commandPool, nullptr);
+    vkDestroyCommandPool(m_logicalDevice, m_commandPool, VK_NULL_HANDLE);
     Logger::Instance()->logVerbose("DeviceHandler vkDestroyCommandPool done");
     for (auto f: m_swapChainFrameBuffers)
-    { vkDestroyFramebuffer(m_logicalDevice, f, nullptr); }
+    { vkDestroyFramebuffer(m_logicalDevice, f, VK_NULL_HANDLE); }
     Logger::Instance()->logVerbose("DeviceHandler vkDestroyFramebuffer done");
-    vkDestroyRenderPass(m_logicalDevice, m_renderPass, nullptr);
+    vkDestroyRenderPass(m_logicalDevice, m_renderPass, VK_NULL_HANDLE);
     Logger::Instance()->logVerbose("DeviceHandler vkDestroyRenderPass done");
     for (auto v: m_swapChainImageViews)
-    { vkDestroyImageView(m_logicalDevice, v, nullptr); }
+    { vkDestroyImageView(m_logicalDevice, v, VK_NULL_HANDLE); }
     Logger::Instance()->logVerbose("DeviceHandler vkDestroyImageView done");
-    vkDestroySwapchainKHR(m_logicalDevice, m_swapchain, nullptr);
+    vkDestroySwapchainKHR(m_logicalDevice, m_swapchain, VK_NULL_HANDLE);
     Logger::Instance()->logVerbose("DeviceHandler vkDestroySwapchainKHR done");
-    vkDestroyDevice(m_logicalDevice, nullptr);
+    vkDestroyDevice(m_logicalDevice, VK_NULL_HANDLE);
     Logger::Instance()->logVerbose("DeviceHandler vkDestroyDevice done");
-    vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
+    vkDestroySurfaceKHR(m_instance, m_surface, VK_NULL_HANDLE);
     Logger::Instance()->logVerbose("DeviceHandler destroySurface done");
     teardownDebugMessenger();
     Logger::Instance()->logVerbose("DeviceHandler teardownDebugMessenger done");
-    vkDestroyInstance(m_instance, nullptr);
+    vkDestroyInstance(m_instance, VK_NULL_HANDLE);
     Logger::Instance()->log("DeviceHandler Destructor end");
 }
 
@@ -735,7 +739,7 @@ void DeviceHandler::recordRenderPrimaryCommandBuffer(
     recordEndCommandBuffer(buffer);
 }
 
-void DeviceHandler::recordRenderSecondaryCommandBufferStart(VkCommandBuffer& buffer, const VkPipeline& pipeline)
+void DeviceHandler::recordRenderSecondaryCommandBufferStart(VkCommandBuffer& buffer)
 {
     VkCommandBufferInheritanceInfo inheritanceInfo{VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO};
     inheritanceInfo.renderPass = m_renderPass;
@@ -763,8 +767,6 @@ void DeviceHandler::recordRenderSecondaryCommandBufferStart(VkCommandBuffer& buf
     scissor.offset = {0, 0};
     scissor.extent = m_info.physicalDeviceSurfaceCapabilities.currentExtent;
     vkCmdSetScissor(buffer, 0, 1, &scissor);
-
-    vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 }
 
 void DeviceHandler::recordOneTimerCommandBufferStart(VkCommandBuffer& buffer)
@@ -782,6 +784,37 @@ void DeviceHandler::recordEndCommandBuffer(VkCommandBuffer& buffer)
     checkVkResult(vkEndCommandBuffer(buffer));
 }
 
+void DeviceHandler::submitAndDeleteCommandBuffer(VkCommandBuffer &buffer)
+{
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &buffer;
+
+    checkVkResult(vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
+    checkVkResult(vkQueueWaitIdle(m_graphicsQueue));
+
+    vkFreeCommandBuffers(m_logicalDevice, m_commandPool, 1, &buffer);
+}
+
+void DeviceHandler::createTextureSampler()
+{
+    VkSamplerCreateInfo samplerInfo{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
+    samplerInfo.magFilter = VK_FILTER_LINEAR;
+    samplerInfo.minFilter = VK_FILTER_LINEAR;
+    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.anisotropyEnable = VK_FALSE;//if we need this later, I will turn ON
+    samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    samplerInfo.unnormalizedCoordinates = VK_FALSE;
+    samplerInfo.compareEnable = VK_FALSE;
+    samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+
+    checkVkResult(vkCreateSampler(m_logicalDevice, &samplerInfo, VK_NULL_HANDLE, &m_sampler));
+}
+
 void DeviceHandler::copyBufferToGPU(VkBuffer& sourceBuffer, VkBuffer& destinationBuffer, VkDeviceSize& size)
 {
     VkCommandBuffer copyCommand;
@@ -794,15 +827,7 @@ void DeviceHandler::copyBufferToGPU(VkBuffer& sourceBuffer, VkBuffer& destinatio
 
     recordEndCommandBuffer(copyCommand);
 
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &copyCommand;
-
-    checkVkResult(vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
-    checkVkResult(vkQueueWaitIdle(m_graphicsQueue));
-
-    vkFreeCommandBuffers(m_logicalDevice, m_commandPool, 1, &copyCommand);
+    submitAndDeleteCommandBuffer(copyCommand);
 }
 
 void DeviceHandler::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory)
@@ -830,6 +855,131 @@ void DeviceHandler::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, Vk
     }
 
     checkVkResult(vkBindBufferMemory(m_logicalDevice, buffer, bufferMemory, 0));
+}
+
+void DeviceHandler::destroyBuffer(VkBuffer &buffer, VkDeviceMemory &bufferMemory)
+{
+    vkDestroyBuffer(m_logicalDevice, buffer, VK_NULL_HANDLE);
+    vkFreeMemory(m_logicalDevice, bufferMemory, VK_NULL_HANDLE);
+}
+
+void DeviceHandler::createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage &image, VkDeviceMemory &imageMemory)
+{
+    VkImageCreateInfo imageInfo{VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
+    imageInfo.imageType = VK_IMAGE_TYPE_2D;
+    imageInfo.extent.width = width;
+    imageInfo.extent.height = height;
+    imageInfo.extent.depth = 1;
+    imageInfo.mipLevels = 1;
+    imageInfo.arrayLayers = 1;
+    imageInfo.format = format;
+    imageInfo.tiling = tiling;
+    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    imageInfo.usage = usage;
+    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    checkVkResult(vkCreateImage(m_logicalDevice, &imageInfo, VK_NULL_HANDLE, &image));
+
+    VkMemoryRequirements memRequirements;
+    vkGetImageMemoryRequirements(m_logicalDevice, image, &memRequirements);
+
+    VkMemoryAllocateInfo allocInfo{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
+    allocInfo.allocationSize = memRequirements.size;
+    allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
+
+    checkVkResult(vkAllocateMemory(m_logicalDevice, &allocInfo, VK_NULL_HANDLE, &imageMemory));
+
+    checkVkResult(vkBindImageMemory(m_logicalDevice, image, imageMemory, 0));
+}
+
+void DeviceHandler::destroyImage(VkImage &image, VkDeviceMemory &imageMemory)
+{
+    vkDestroyImage(m_logicalDevice, image, VK_NULL_HANDLE);
+    vkFreeMemory(m_logicalDevice, imageMemory, VK_NULL_HANDLE);
+}
+
+void DeviceHandler::changeImageLayout(VkImage &image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, VkAccessFlags srcMask, VkAccessFlags dstMask, VkPipelineStageFlags sourceFlags, VkPipelineStageFlags destFlags)
+{
+    VkCommandBuffer commandBuffer{};
+    recordOneTimerCommandBufferStart(commandBuffer);
+
+    VkImageMemoryBarrier barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
+    barrier.oldLayout = oldLayout;
+    barrier.newLayout = newLayout;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.image = image;
+    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    barrier.subresourceRange.baseMipLevel = 0;
+    barrier.subresourceRange.levelCount = 1;
+    barrier.subresourceRange.baseArrayLayer = 0;
+    barrier.subresourceRange.layerCount = 1;
+    barrier.srcAccessMask = srcMask;
+    barrier.dstAccessMask = dstMask;
+
+    VkPipelineStageFlags sourceStage{sourceFlags};
+    VkPipelineStageFlags destinationStage{destFlags};
+
+    vkCmdPipelineBarrier(
+        commandBuffer,
+        sourceStage, destinationStage,
+        0,
+        0, nullptr,
+        0, nullptr,
+        1, &barrier
+    );
+
+    recordEndCommandBuffer(commandBuffer);
+
+    submitAndDeleteCommandBuffer(commandBuffer);
+}
+
+void DeviceHandler::copyBufferToImage(VkBuffer &buffer, VkImage &image, uint32_t width, uint32_t height)
+{
+    VkCommandBuffer commandBuffer{};
+    recordOneTimerCommandBufferStart(commandBuffer);
+
+    VkBufferImageCopy region{};
+    region.bufferOffset = 0;
+    region.bufferRowLength = 0;
+    region.bufferImageHeight = 0;
+    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.imageSubresource.mipLevel = 0;
+    region.imageSubresource.baseArrayLayer = 0;
+    region.imageSubresource.layerCount = 1;
+    region.imageOffset = {0, 0, 0};
+    region.imageExtent = {
+        width,
+        height,
+        1
+    };
+
+    vkCmdCopyBufferToImage(commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+    recordEndCommandBuffer(commandBuffer);
+
+    submitAndDeleteCommandBuffer(commandBuffer);
+}
+
+void DeviceHandler::createImageView(VkImageView& imageView, VkImage &image, VkFormat format, VkImageAspectFlags aspectFlags)
+{
+    VkImageViewCreateInfo viewInfo{VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
+    viewInfo.image = image;
+    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    viewInfo.format = format;
+    viewInfo.subresourceRange.aspectMask = aspectFlags;
+    viewInfo.subresourceRange.baseMipLevel = 0;
+    viewInfo.subresourceRange.levelCount = 1;
+    viewInfo.subresourceRange.baseArrayLayer = 0;
+    viewInfo.subresourceRange.layerCount = 1;
+
+    checkVkResult(vkCreateImageView(m_logicalDevice, &viewInfo, VK_NULL_HANDLE, &imageView));
+}
+
+void DeviceHandler::destroyImageView(VkImageView &imageView)
+{
+    vkDestroyImageView(m_logicalDevice, imageView, VK_NULL_HANDLE);
 }
 
 uint32_t DeviceHandler::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
