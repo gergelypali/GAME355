@@ -157,7 +157,7 @@ void VulkanRenderer::vulkanRenderShape2d(const std::string& nameVertex, const st
     auto shape = static_cast<Shape2d*>(m_renderTheseObjects["shape2d"]);
     MATH::Vec4 positionAndSize{position.x /m_windowX - 1, position.y /m_windowY - 1, size.x/(float)m_windowX, size.y/(float)m_windowY};
     shape->addShape2dToDraw(nameVertex, nameIndex, positionAndSize, color, vertexBuffer, indexBuffer, indexCount);
-    if(shape->m_shapeCount < 999)//hardcoded max number of shapes; also in the uboSturct; TODO: change it to be variable
+    if(shape->m_shapeCount < 9999)//hardcoded max number of shapes; also in the uboSturct; TODO: change it to be variable
         shape->m_shapeCount += 1;
 }
 
@@ -166,7 +166,7 @@ void VulkanRenderer::vulkanRenderShape2dWithTexture(const std::string &nameVerte
     auto shape = static_cast<Shape2d*>(m_renderTheseObjects["shape2d"]);
     MATH::Vec4 positionAndSize{position.x /m_windowX - 1, position.y /m_windowY - 1, size.x/(float)m_windowX, size.y/(float)m_windowY};
     shape->addShape2dToDraw(nameVertex, nameIndex, nameTexture, positionAndSize, set, vertexBuffer, indexBuffer, indexCount);
-    if(shape->m_shapeCount < 999)//hardcoded max number of shapes; also in the uboSturct; TODO: change it to be variable
+    if(shape->m_shapeCount < 9999)//hardcoded max number of shapes; also in the uboSturct; TODO: change it to be variable
         shape->m_shapeCount += 1;
 }
 

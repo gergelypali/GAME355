@@ -13,7 +13,7 @@ void Shape2d::init()
 void Shape2d::createPipeline(PipelineManager* pm)
 {
     pm->addBaseGraphicsPipelineCreateInfo(m_name + "Pipeline");
-    pm->addVertexDataToPipeline("rectangle", m_name + "Pipeline");
+    pm->addVertexDataToPipeline("shape2d", m_name + "Pipeline");
     Logger::Instance()->logInfo("Shape2d: createPipeline 1");
     ubo0Pipelinelayout = pm->createGraphicsPipeline(ubo0Pipeline, m_name + "Pipeline", "ubo0", "shaders/shape2dShaderVert.spv", "shaders/shape2dShaderFrag.spv");
     Logger::Instance()->logInfo("Shape2d: createPipeline 2");
@@ -82,9 +82,7 @@ void Shape2d::createCommandBuffer(VkCommandBuffer& buffer)
             vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, ubo0Sampler1Pipeline);
             vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, ubo0Sampler1Pipelinelayout, 0, 1, &ubo0Set, 0, VK_NULL_HANDLE);
             vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, ubo0Sampler1Pipelinelayout, 1, 1, m_textureMap[obj.second.nameTexture], 0, VK_NULL_HANDLE);
-        }
-        else
-        {
+        } else {
             vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, ubo0Pipeline);
             vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, ubo0Pipelinelayout, 0, 1, &ubo0Set, 0, VK_NULL_HANDLE);
         }

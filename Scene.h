@@ -24,6 +24,8 @@ protected:
 
     bool checkEntityCollision(std::shared_ptr<Entity> &one, std::shared_ptr<Entity> &two);
     std::pair<bool, bool> checkInsideEntity(std::shared_ptr<Entity>& one, std::shared_ptr<Entity>& two);
+    std::pair<bool, bool> checkPointInsideEntity(MATH::Vec2& point, std::shared_ptr<Entity>& entity);
+    void checkEntityLifetime(std::shared_ptr<Entity> &entity);
 
 public:
     Scene() = delete;

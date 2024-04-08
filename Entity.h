@@ -22,7 +22,10 @@ private:
         CSpriteStack,
         CAnimation,
         CVoxel,
-        CText
+        CText,
+        CNode,
+        CWalls,
+        CMaze
         > m_components;
     const std::string m_tag = "NONE";
     bool m_active{true};

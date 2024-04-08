@@ -4,6 +4,7 @@
 #include "SceneMenu.h"
 #include "SceneEnd.h"
 #include "VulkanScene1.h"
+#include "VulkanSceneMenu.h"
 #include "Action.h"
 #include "AssetManager.h"
 #include <iostream>
@@ -13,7 +14,7 @@
 
 void GameEngine::init()
 {
-    Logger::Instance()->setLogLevel(Logger::severity::VERBOSE);
+    Logger::Instance()->setLogLevel(Logger::severity::ERROR);
     Logger::Instance()->log("GameEngine init Start");
     // TODO: load everything from a or multiple config files, everything means every config that is relevant to be in a configfile
     if (SDL_Init(SDL_INIT_VIDEO || SDL_INIT_AUDIO) < 0)
@@ -26,7 +27,7 @@ void GameEngine::init()
     if (SDLRenderer)
     {
         Logger::Instance()->logVerbose("GameEngine init SDL window create");
-        m_window = SDL_CreateWindow("GameSDL", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 768, 0);
+        m_window = SDL_CreateWindow("GameSDL", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, m_windowX, m_windowY, 0);
         if (!m_window)
         {
             Logger::Instance()->logCritical(strcat("SDL Window with SDL creation failed! With SDL_Error: ", SDL_GetError()));
@@ -41,7 +42,7 @@ void GameEngine::init()
     else
     {
         Logger::Instance()->logVerbose("GameEngine init Vulkan window create");
-        m_window = SDL_CreateWindow("GameVulkan", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 768, SDL_WINDOW_VULKAN);
+        m_window = SDL_CreateWindow("GameVulkan", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, m_windowX, m_windowY, SDL_WINDOW_VULKAN);
         if (!m_window)
         {
             Logger::Instance()->logCritical(strcat("SDL Window with Vulkan creation failed! With SDL_Error: ", SDL_GetError()));
@@ -115,7 +116,7 @@ void GameEngine::updateFPS(const double frameLength)
 void GameEngine::run()
 {
     Logger::Instance()->log("GameEngine run Start");
-    changeScene("VulkanScene1");
+    changeScene("VulkanSceneMenu");
 
     SDL_Event event;
 
@@ -239,6 +240,11 @@ void GameEngine::changeScene(std::string newScene)
     {
         m_scenes[m_currentScene] = std::make_shared<VulkanScene1>(VulkanScene1(this));
         Logger::Instance()->logVerbose("GameEngine changeScene VulkanScene1 branch");
+    }
+    else if (m_currentScene == "VulkanSceneMenu")
+    {
+        m_scenes[m_currentScene] = std::make_shared<VulkanSceneMenu>(VulkanSceneMenu(this));
+        Logger::Instance()->logVerbose("GameEngine changeScene VulkanSceneMenu branch");
     }
     Logger::Instance()->log("GameEngine changeScene End");
 }

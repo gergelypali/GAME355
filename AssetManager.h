@@ -67,6 +67,7 @@ public:
 
     SDL_Texture* GetTexture(const std::string& name);
     VkDescriptorSet& GetVulkanTexture(const std::string& name);
+    MATH::Vec2 GetVulkanTextureSize(const std::string& name);
     std::shared_ptr<Animation> GetAnimation(const std::string& name);
     Mix_Chunk* GetSound(const std::string& name);
     Mix_Music* GetMusic(const std::string& name);

@@ -123,6 +123,22 @@ namespace PIPELINE
 
 namespace BUFFER
 {
+    // the maxSize is a tricky question: most of the GPUs it is 256 bytes
+    // but to be like "99%" compatible it should be 128 bytes which is
+    // 32 floats
+    struct uintPushConstant
+    {
+        uint32_t number;
+    };
+
+    struct shape2dPushConstant
+    {
+        uint32_t notTexture{0};
+        MATH::Vec2 position{};
+        MATH::Vec2 size{};
+        MATH::Vec3 color{};
+    };
+
     struct vec4PushConstant
     {
         MATH::Vec4 vector{};
@@ -136,8 +152,8 @@ namespace BUFFER
 
     struct shape2dUboData
     {
-        MATH::Vec4 positionAndSize[1000];
-        MATH::Vec4 color[1000];
+        MATH::Vec4 positionAndSize[2048];
+        MATH::Vec4 color[2048];
     };
 }
 
@@ -149,6 +165,8 @@ namespace TEXTURE
         VkDeviceMemory imageMemory{};
         VkImageView imageView{};
         VkDescriptorSet set{};
+        int width{0};
+        int height{0};
     };
 }
 

@@ -21,6 +21,7 @@ private:
     double MAXFPS = 60.0;
     double FPS = MAXFPS;
     double TICKS_PER_FRAME = 1000.0 / FPS;
+    int m_windowX{1600}, m_windowY{800};
 
     // main game variables
     bool m_running{true};
@@ -42,10 +43,10 @@ private:
     int m_musicVolume{0};
 
     // random number generators;
-	std::mt19937 m_generator{std::chrono::system_clock::now().time_since_epoch().count()};
-	std::uniform_real_distribution<float> m_uniformDistribution{0.0f, 1.0f};
-	std::normal_distribution<float> m_normalDistribution{0.0f, 1.0f};
-	std::uniform_real_distribution<float> m_uniformDistributionNegative{-1.0f, 1.0f};
+    std::mt19937 m_generator{std::chrono::system_clock::now().time_since_epoch().count()};
+    std::uniform_real_distribution<float> m_uniformDistribution{0.0f, 1.0f};
+    std::normal_distribution<float> m_normalDistribution{0.0f, 1.0f};
+    std::uniform_real_distribution<float> m_uniformDistributionNegative{-1.0f, 1.0f};
 
     // main methods
     void init();
@@ -75,6 +76,7 @@ public:
     /// @brief get the active window
     /// @return the sdl window object
     SDL_Window* window() { return m_window; };
+    void getWindowSize(int& windowX, int& windowY) { windowX = m_windowX; windowY = m_windowY; };
     /// @brief get the renderer
     /// @return the sdl renderer object
     SDL_Renderer* renderer() { return m_SDLRenderer; };

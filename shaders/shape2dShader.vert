@@ -1,11 +1,12 @@
 #version 450
 
 layout(location = 0) in vec2 inPosition;
+
 layout(location = 0) out vec3 fragColor;
 
 layout(binding = 0) uniform uboData {
-    vec4 positionAndSize[1000];
-    vec4 color[1000];
+    vec4 positionAndSize[2048];
+    vec4 color[2048];
 } ubo;
 
 void main() {

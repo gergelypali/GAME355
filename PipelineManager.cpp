@@ -122,7 +122,14 @@ pipelineInfo &PipelineManager::addBaseGraphicsPipelineCreateInfo(const std::stri
 
     //VkPipelineColorBlendAttachmentState
     m_pipelines[name].colorBlendAttachmentCreateInfo.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    m_pipelines[name].colorBlendAttachmentCreateInfo.blendEnable = VK_FALSE;
+    // alpha blending
+    m_pipelines[name].colorBlendAttachmentCreateInfo.blendEnable = VK_TRUE;
+    m_pipelines[name].colorBlendAttachmentCreateInfo.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+    m_pipelines[name].colorBlendAttachmentCreateInfo.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    m_pipelines[name].colorBlendAttachmentCreateInfo.colorBlendOp = VK_BLEND_OP_ADD;
+    m_pipelines[name].colorBlendAttachmentCreateInfo.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    m_pipelines[name].colorBlendAttachmentCreateInfo.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    m_pipelines[name].colorBlendAttachmentCreateInfo.alphaBlendOp = VK_BLEND_OP_ADD;
 
     //VkPipelineColorBlendStateCreateInfo
     m_pipelines[name].colorBlendingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -250,7 +257,7 @@ void PipelineManager::createBaseDescriptorSetLayouts()
     m_checkVkResult(vkCreateDescriptorSetLayout(m_logicalDevice, &ubo0vertexCreateInfo, VK_NULL_HANDLE, &m_descriptorLayouts["ubo0vertex"].layout));
 
     VkDescriptorPoolSize uboPoolSize{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER};
-    uboPoolSize.descriptorCount = 1;
+    uboPoolSize.descriptorCount = 5U;
     VkDescriptorPoolCreateInfo ubopoolCreateInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
     ubopoolCreateInfo.poolSizeCount = 1;
     ubopoolCreateInfo.pPoolSizes = &uboPoolSize;
@@ -279,7 +286,7 @@ void PipelineManager::createBaseDescriptorSetLayouts()
     m_checkVkResult(vkCreateDescriptorSetLayout(m_logicalDevice, &sampler1fragmentCreateInfo, VK_NULL_HANDLE, &m_descriptorLayouts["sampler1fragment"].layout));
 
     VkDescriptorPoolSize samplerPoolSize{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER};
-    samplerPoolSize.descriptorCount = 1;
+    samplerPoolSize.descriptorCount = 50U;
     VkDescriptorPoolCreateInfo samplerpoolCreateInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
     samplerpoolCreateInfo.poolSizeCount = 1;
     samplerpoolCreateInfo.pPoolSizes = &samplerPoolSize;
@@ -371,4 +378,41 @@ void PipelineManager::createBasePipelineLayouts()
     ));
 
     m_pipelineLayout.insert({"ubo0sampler1", ubosamplerLayout});
+
+    // pushConstant part; add a uint sized pushconstant to the pipelinelayout
+    VkPushConstantRange pushC;
+    pushC.size = sizeof(uintPC);
+    pushC.offset = 0;
+    pushC.stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
+    std::vector<VkPushConstantRange> range = {pushC};
+    layoutCreateInfo.pushConstantRangeCount = (uint32_t)range.size();
+    layoutCreateInfo.pPushConstantRanges = range.data();
+
+    VkPipelineLayout ubosamplerPCLayout{};
+    m_checkVkResult(vkCreatePipelineLayout(
+    m_logicalDevice,
+    &layoutCreateInfo,
+    VK_NULL_HANDLE,
+    &ubosamplerPCLayout
+    ));
+
+    m_pipelineLayout.insert({"ubo0sampler1uintPC", ubosamplerPCLayout});
+
+    // pushConstant part; shape2d pushconstant
+    pushC.size = sizeof(shape2dPC);
+    pushC.offset = 0;
+    pushC.stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
+    range = {pushC};
+    layoutCreateInfo.pushConstantRangeCount = (uint32_t)range.size();
+    layoutCreateInfo.pPushConstantRanges = range.data();
+
+    VkPipelineLayout ubosamplershae2dPCLayout{};
+    m_checkVkResult(vkCreatePipelineLayout(
+    m_logicalDevice,
+    &layoutCreateInfo,
+    VK_NULL_HANDLE,
+    &ubosamplershae2dPCLayout
+    ));
+
+    m_pipelineLayout.insert({"ubo0sampler1shape2dPC", ubosamplershae2dPCLayout});
 }

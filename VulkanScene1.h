@@ -5,12 +5,16 @@
 #include <memory>
 #include "Vector.h"
 
+class Grid;
+
 class VulkanScene1: public Scene
 {
 private:
     std::shared_ptr<Entity> m_player{nullptr};
     std::shared_ptr<Entity> m_map{nullptr};
-    int windowX, windowY;
+    int windowX{0}, windowY{0};
+    int mazeX{40}, mazeY{20};
+    std::shared_ptr<Grid> m_grid{nullptr};
 
     void init() override;
     void endScene() override;
@@ -21,8 +25,12 @@ private:
     void sMovement();
     void playerPhysicsUpdate();
     void reactToMapBorder();
+    void checkWalls();
 
     void spawnEnemy(const float& x, const float& y);
+    void spawnMarker(float x, float y, int lifetime, std::string markerName);
+    void generateMaze();
+    void checkEndMap();
 
 public:
     VulkanScene1() = delete;

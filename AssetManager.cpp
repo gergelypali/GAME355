@@ -16,28 +16,8 @@ AssetManager::AssetManager(GameEngine* ge)
     AddTexture("steam", "textures/steam_logo.png");
     AddTexture("plane", "textures/red_plane.png");
     AddTexture("brick", "textures/brick_bg.png");
-    /*
-    AddTexture("spriteStackPurpleCar", "textures/PurpleCar.png");
-    AddTexture("spriteStackRedMotorcycle", "textures/RedMotorcycle.png");
-    AddTexture("spriteStackGreenBigCar", "textures/GreenBigCar.png");
-    AddTexture("spriteStackWhiteMotorcycle", "textures/WhiteMotorcycle.png");
-    AddTexture("spriteStackBrownMotorcycle", "textures/BrownMotorcycle.png");
-    AddTexture("spriteStackGreenCar", "textures/GreenCar.png");
-    AddTexture("spriteStackBlueCar", "textures/BlueCar.png");
-    AddTexture("spriteStackYellowCar", "textures/YellowCar.png");
-    AddTexture("spriteStackRedCar", "textures/RedCar.png");
-    AddTexture("characters", "textures/characters.png");
-    AddTexture("roadParts", "textures/roads.png");
-    AddTexture("startGameButton", "textures/newGameButtonText.png");
-    AddTexture("startGameButtonAnim", "textures/newGameButtonAnim.png");
-    AddTexture("exitGameButton", "textures/exitGameButtonText.png");
-    AddTexture("exitGameButtonAnim", "textures/exitGameButtonAnim.png");
-    AddTexture("retryGameButtonAnim", "textures/retryGameButtonAnim.png");
-    AddTexture("arachnoid", "textures/Arachnoid.png");
-    AddTexture("house1", "textures/TallBuilding01.png");
-    AddTexture("menuBG", "textures/menuBG.jpg");
-    AddTexture("cityBG", "textures/cityBG.jpg");
-    */
+    AddTexture("startButton", "textures/start_button.png");
+    AddTexture("exitButton", "textures/exit_button.png");
 
     // and animations
     AddAnimation("walkDown", 150, std::vector<std::pair<int,int>>{std::pair{0, 0}, std::pair{0, 1}, std::pair{0, 2}, std::pair{0, 3}});
@@ -49,18 +29,23 @@ AssetManager::AssetManager(GameEngine* ge)
     AddAnimation("menuButtonAnim", 168, std::vector<std::pair<int,int>>{std::pair{0, 0}, std::pair{0, 1}, std::pair{0, 2}, std::pair{1, 0}, std::pair{1, 1}, std::pair{1, 2}, std::pair{2, 0}, std::pair{2, 1}, std::pair{2, 2}});
 
     // fonts
-    //AddFont("Branda", "fonts/Branda.ttf");
-    //AddFont("ChrustyRock", "fonts/ChrustyRock.ttf");
-    //AddFont("Debrosee", "fonts/Debrosee.ttf");
-    //AddFont("Guazhiru", "fonts/Guazhiru.ttf");
     AddFont("Nasa21", "fonts/Nasa21.ttf");
-    //AddFont("ToThePoint", "fonts/ToThePoint.ttf");
 
     // vertices and indices
     AddVertexBuffer("rectangleVertex", "./2dRectangleVertex.txt");
+    AddVertexBuffer("wallsVertex", "./2dWallsVertex.txt");
+    AddVertexBuffer("xarrowVertex", "./arrowVertex.txt");
     AddIndexBuffer("rectangleIndex", "./2dRectangleIndex.txt");
     AddIndexBuffer("triangleIndex", "./2dTriangleIndex.txt");
     AddIndexBuffer("newformIndex", "./2dNewFormIndex.txt");
+    AddIndexBuffer("wallsNoneIndex", "./2dWallsNoneIndex.txt");
+    AddIndexBuffer("wallsWestIndex", "./2dWallsWestIndex.txt");
+    AddIndexBuffer("wallsNorthIndex", "./2dWallsNorthIndex.txt");
+    AddIndexBuffer("wallsNorthWestIndex", "./2dWallsNorthWestIndex.txt");
+    AddIndexBuffer("rightArrow", "./2drightArrowIndex.txt");
+    AddIndexBuffer("leftArrow", "./2dleftArrowIndex.txt");
+    AddIndexBuffer("downArrow", "./2ddownArrowIndex.txt");
+    AddIndexBuffer("upArrow", "./2dupArrowIndex.txt");
 }
 
 AssetManager::~AssetManager()
@@ -132,6 +117,8 @@ void AssetManager::AddTexture(const std::string &name, const std::string &pathTo
         SDL_Surface* image = IMG_Load(pathToFile.c_str());
         pixels = image->pixels;
         int size = image->h * image->pitch;// in bytes
+        textureToAdd.height = image->h;
+        textureToAdd.width = image->w;
 
         if(!pixels)
         {
@@ -184,6 +171,11 @@ SDL_Texture* AssetManager::GetTexture(const std::string &name)
 VkDescriptorSet &AssetManager::GetVulkanTexture(const std::string &name)
 {
     return m_vulkanTextures[name].set;
+}
+
+MATH::Vec2 AssetManager::GetVulkanTextureSize(const std::string &name)
+{
+    return MATH::Vec2{m_vulkanTextures[name].width, m_vulkanTextures[name].height};
 }
 
 std::shared_ptr<Animation> AssetManager::GetAnimation(const std::string &name)

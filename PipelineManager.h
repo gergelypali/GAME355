@@ -9,6 +9,8 @@
 #include "Structs.h"
 
 using vec4PC = BUFFER::vec4PushConstant;
+using uintPC = BUFFER::uintPushConstant;
+using shape2dPC = BUFFER::shape2dPushConstant;
 using pipelineInfo = PIPELINE::pipelineInfo;
 using descriptorLayoutInfo = PIPELINE::descriptorLayoutInfo;
 

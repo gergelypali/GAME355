@@ -86,14 +86,14 @@ void Scene::sRender()
 
 void Scene::drawShape2d(std::shared_ptr<Entity> &entity)
 {
+    if (m_ge->isSDL())
+        return;
+
     if (!entity->hasComponent<CTransform>() || !entity->hasComponent<CRectBody>() || !entity->hasComponent<CShape2d>())
         return;
     auto& transform = entity->getComponent<CTransform>();
     auto& body = entity->getComponent<CRectBody>();
     auto& shape = entity->getComponent<CShape2d>();
-
-    if (m_ge->isSDL())
-        return;
 
     MATH::Vec2 position{transform.pos.x, transform.pos.y};
     MATH::Vec2 size{body.halfWidth(), body.halfHeight()};
@@ -296,44 +296,71 @@ void Scene::drawText(std::shared_ptr<Entity> &entity)
 
 bool Scene::checkEntityCollision(std::shared_ptr<Entity> &one, std::shared_ptr<Entity> &two)
 {
-        if (one->hasComponent<CTransform>() && one->hasComponent<CAABB>() &&
-            two->hasComponent<CTransform>() && two->hasComponent<CAABB>())
-        {
-            auto& oneTransform = one->getComponent<CTransform>();
-            auto& oneAABB = one->getComponent<CAABB>();
-            auto& twoTransform = two->getComponent<CTransform>();
-            auto& twoAABB = two->getComponent<CAABB>();
+    if (one->hasComponent<CTransform>() && one->hasComponent<CAABB>() &&
+        two->hasComponent<CTransform>() && two->hasComponent<CAABB>())
+    {
+        auto& oneTransform = one->getComponent<CTransform>();
+        auto& oneAABB = one->getComponent<CAABB>();
+        auto& twoTransform = two->getComponent<CTransform>();
+        auto& twoAABB = two->getComponent<CAABB>();
 
-            MATH::Vec2 diff{fabsf(oneTransform.pos.x - twoTransform.pos.x),
-                            fabsf(oneTransform.pos.y - twoTransform.pos.y)};
-            return diff.x < abs(oneAABB.halfWidth + twoAABB.halfWidth) &&
-                    diff.y < abs(oneAABB.halfHeight + twoAABB.halfHeight);
-        }
-        else
-        {
-            return false;
-        }
+        MATH::Vec2 diff{fabsf(oneTransform.pos.x - twoTransform.pos.x),
+                        fabsf(oneTransform.pos.y - twoTransform.pos.y)};
+        return diff.x < abs(oneAABB.halfWidth() + twoAABB.halfWidth()) &&
+                diff.y < abs(oneAABB.halfHeight() + twoAABB.halfHeight());
+    }
+    else
+    {
+        return false;
+    }
 }
 
 std::pair<bool, bool> Scene::checkInsideEntity(std::shared_ptr<Entity>& one, std::shared_ptr<Entity>& two)
 {
-        if (one->hasComponent<CTransform>() && one->hasComponent<CAABB>() &&
-            two->hasComponent<CTransform>() && two->hasComponent<CAABB>())
-        {
-            auto& oneTransform = one->getComponent<CTransform>();
-            auto& oneAABB = one->getComponent<CAABB>();
-            auto& twoTransform = two->getComponent<CTransform>();
-            auto& twoAABB = two->getComponent<CAABB>();
+    if (one->hasComponent<CTransform>() && one->hasComponent<CAABB>() &&
+        two->hasComponent<CTransform>() && two->hasComponent<CAABB>())
+    {
+        auto& oneTransform = one->getComponent<CTransform>();
+        auto& oneAABB = one->getComponent<CAABB>();
+        auto& twoTransform = two->getComponent<CTransform>();
+        auto& twoAABB = two->getComponent<CAABB>();
 
-            bool outsideX = oneTransform.pos.x - oneAABB.halfWidth + oneTransform.vel.x < twoTransform.pos.x - twoAABB.halfWidth ||
-                oneTransform.pos.x + oneAABB.halfWidth + oneTransform.vel.x > twoTransform.pos.x + twoAABB.halfWidth;
-            bool outsideY = oneTransform.pos.y - oneAABB.halfHeight + oneTransform.vel.y < twoTransform.pos.y - twoAABB.halfHeight ||
-                oneTransform.pos.y + oneAABB.halfHeight + oneTransform.vel.y > twoTransform.pos.y + twoAABB.halfHeight;
+        bool outsideX = oneTransform.pos.x - oneAABB.halfWidth() + oneTransform.vel.x < twoTransform.pos.x - twoAABB.halfWidth() ||
+            oneTransform.pos.x + oneAABB.halfWidth() + oneTransform.vel.x > twoTransform.pos.x + twoAABB.halfWidth();
+        bool outsideY = oneTransform.pos.y - oneAABB.halfHeight() + oneTransform.vel.y < twoTransform.pos.y - twoAABB.halfHeight() ||
+            oneTransform.pos.y + oneAABB.halfHeight() + oneTransform.vel.y > twoTransform.pos.y + twoAABB.halfHeight();
 
-            return std::make_pair(outsideX, outsideY);
-        }
-        else
-        {
-            return std::make_pair(false, false);
-        }
+        return std::make_pair(outsideX, outsideY);
+    }
+    else
+    {
+        return std::make_pair(false, false);
+    }
+}
+
+std::pair<bool, bool> Scene::checkPointInsideEntity(MATH::Vec2& point, std::shared_ptr<Entity>& entity)
+{
+    if (!entity->hasComponent<CTransform>() && !entity->hasComponent<CAABB>())
+        return std::make_pair(false, false);
+
+    auto& transform = entity->getComponent<CTransform>();
+    auto& aabb = entity->getComponent<CAABB>();
+
+    bool insideX = transform.pos.x - aabb.halfWidth() < point.x &&
+        transform.pos.x + aabb.halfWidth() > point.x;
+    bool insideY = transform.pos.y - aabb.halfHeight() < point.y &&
+        transform.pos.y + aabb.halfHeight() > point.y;
+
+    return std::make_pair(insideX, insideY);
+}
+
+void Scene::checkEntityLifetime(std::shared_ptr<Entity> &entity)
+{
+    if (!entity->hasComponent<CLifetime>())
+        return;
+
+    auto& lifetime = entity->getComponent<CLifetime>();
+
+    if(m_currentFrame - lifetime.startFrame == lifetime.maxLifetime)
+        entity->destroy();
 }

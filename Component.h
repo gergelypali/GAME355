@@ -8,6 +8,8 @@
 #include <SDL_ttf.h>
 #include <cstring>
 #include <vulkan/vulkan.h>
+#include <float.h>
+#include <vector>
 
 class Animation;
 
@@ -40,19 +42,26 @@ public:
 
 class CAABB : public Component
 {
+private:
+    int m_width{0};
+    int m_height{0};
+    int m_halfWidth{0};
+    int m_halfHeight{0};
+
 public:
     CAABB() {};
     CAABB(int w, int h) :
-        width(w),
-        height(h),
-        halfWidth(w / 2),
-        halfHeight(h / 2)
+        m_width(w),
+        m_height(h),
+        m_halfWidth(w / 2),
+        m_halfHeight(h / 2)
     {};
 
-    int width{0};
-    int height{0};
-    int halfWidth{0};
-    int halfHeight{0};
+    int width() { return m_width * scale; };
+    int height() { return m_height * scale; };
+    int halfWidth() { return m_halfWidth * scale; };
+    int halfHeight() { return m_halfHeight * scale; };
+    float scale{1.f};
 
 };
 
@@ -88,11 +97,13 @@ public:
     CRectBody(int width, int height) : m_width(width), m_height(height), m_halfWidth(width / 2), m_halfHeight(height / 2) {};
     CRectBody(int width, int height, MATH::Vec4 color) : m_width(width), m_height(height), m_halfWidth(width / 2), m_halfHeight(height / 2), m_color(color) {};
 
-    int width() { return m_width; };
-    int height() { return m_height; };
-    int halfWidth() { return m_halfWidth; };
-    int halfHeight() { return m_halfHeight; };
+    int width() { return m_width * scale; };
+    int height() { return m_height * scale; };
+    int halfWidth() { return m_halfWidth * scale; };
+    int halfHeight() { return m_halfHeight * scale; };
     MATH::Vec4& color() { return m_color; };
+
+    float scale{1.f};
 
 };
 
@@ -245,6 +256,43 @@ public:
     TTF_Font* font{nullptr};
     SDL_Color color{};
     int fontSize{0};
+
+};
+
+class CNode : public Component
+{
+public:
+    CNode() {};
+    CNode(int rowIn, int columnIn, int idIn)
+        : row(rowIn), column(columnIn), id(idIn), scores(3, std::vector<int>(3, 1000)) {};
+
+    float score{FLT_MAX};
+    std::vector<std::vector<int>> scores;
+    //std::vector<int> scores(3, INT_MAX);
+    int id{0};
+    int row{0};
+    int column{0};
+
+    // just for maze generation
+    int xDir{0};
+    int yDir{0};
+
+};
+
+class CWalls : public Component
+{
+public:
+    CWalls() {};
+
+    bool north{true};
+    bool west{true};
+
+};
+
+class CMaze : public Component
+{
+public:
+    CMaze() {};
 
 };
 
