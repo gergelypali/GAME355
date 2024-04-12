@@ -1,3 +1,10 @@
+/// used sources from the internet
+/// https://registry.khronos.org/vulkan/specs/1.3-extensions/html/vkspec.html#introduction
+/// https://vulkan-tutorial.com/Introduction
+/// https://www.khronos.org/opengl/wiki/Rendering_Pipeline_Overview
+/// https://vkguide.dev/
+
+
 #ifndef VULKANRENDERER_H
 #define VULKANRENDERER_H
 
@@ -28,7 +35,6 @@ private:
 
     // we store the renderable objects in a vector maybe
     std::map<std::string, VulkanRenderableObject*> m_renderTheseObjects;
-    //std::vector<VulkanRenderableObject*> m_renderTheseObjects;
 
     VkCommandBuffer m_primaryCommandBuffer;
     std::vector<VkCommandBuffer> m_secondaryCommandBuffer;

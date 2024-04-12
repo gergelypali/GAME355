@@ -1,3 +1,5 @@
+/// not used after Vulkan migration so it is outdated
+
 #ifndef SCENEEND_H
 #define SCENEEND_H
 

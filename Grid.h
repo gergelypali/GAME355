@@ -1,3 +1,8 @@
+/// used sources from the internet:
+/// https://en.wikipedia.org/wiki/Maze_generation_algorithm#Wilson's_algorithm
+/// https://weblog.jamisbuck.org/2011/1/20/maze-generation-wilson-s-algorithm
+
+
 #ifndef GRID_H
 #define GRID_H
 

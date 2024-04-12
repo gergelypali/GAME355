@@ -132,16 +132,6 @@ void GameEngine::run()
                 m_running = false;
             if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_Q)
                 m_running = false;
-            /* just for debugging and testing
-            if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_U)
-                changeScene("SceneOne");
-            if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_I)
-                changeScene("SceneMenu");
-            if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_N)
-                MAXFPS += 10;
-            if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_M)
-                MAXFPS -= 10;
-            */
             
             if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP)
             {
@@ -178,15 +168,12 @@ void GameEngine::run()
             }
             else if (event.type == SDL_MOUSEMOTION)
             {
-                //Logger::Instance()->log("SDL Mouse Motion event Start");
                 if (currentScene()->getActionMap().find(event.motion.type) == currentScene()->getActionMap().end())
                 {
-                    //Logger::Instance()->log("SDL Mouse Motion event NotFound");
                     continue;
                 }
                 const std::string type = "START";
                 currentScene()->doAction(Action(currentScene()->getActionMap()[(event.motion.type)], type, event));
-                //Logger::Instance()->log("SDL Mouse Motion event End");
             }
         }
 
@@ -298,33 +285,18 @@ void GameEngine::renderText(const std::string& textToRender, TTF_Font* font, con
     // in that way we can do the rendering faster; dynamic text is the usual, every time create a new texture and render it, or check if the text has changed, aaaaand
     // create a new texture in that case only
 
-    //Logger::Instance()->log("GameEngine renderText Start");
-    //Logger::Instance()->logVerbose("textToRender = " + textToRender);
-    //Logger::Instance()->logVerbose("color = " + std::to_string(color.r) + " "+ std::to_string(color.g) + " " + std::to_string(color.b) + " " + std::to_string(color.a));
-    //Logger::Instance()->logVerbose("fontSize = " + fontSize);
-    //Logger::Instance()->logVerbose("pos = " + std::to_string(pos.x) + " " + std::to_string(pos.y));
     TTF_SetFontSize(font, fontSize);
-    //Logger::Instance()->logVerbose("GameEngine renderText 1");
     SDL_Surface* textSurface = TTF_RenderText_Solid(font, textToRender.c_str(), color);
-    //Logger::Instance()->logVerbose("GameEngine renderText 2");
     SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer(), textSurface);
-    //Logger::Instance()->logVerbose("GameEngine renderText 3");
     SDL_SetTextureBlendMode(textTexture, SDL_BlendMode::SDL_BLENDMODE_BLEND);
-    //Logger::Instance()->logVerbose("GameEngine renderText 4");
-    // can add alpha to text also
-    //SDL_SetTextureAlphaMod(textTexture, textBufferMap[index].alpha);
     SDL_Rect rect;
     rect.x = pos.x - (textSurface->w / 2.0f);
     rect.y = pos.y - (textSurface->h / 2.0f);
     rect.w = textSurface->w;
     rect.h = textSurface->h;
 
-    //Logger::Instance()->logVerbose("GameEngine renderText 5");
     SDL_RenderCopy(renderer(), textTexture, NULL, &rect);
 
-    //Logger::Instance()->logVerbose("GameEngine renderText 6");
     SDL_DestroyTexture(textTexture);
-    //Logger::Instance()->logVerbose("GameEngine renderText 7");
     SDL_FreeSurface(textSurface);
-    //Logger::Instance()->log("GameEngine renderText End");
 }

@@ -268,7 +268,6 @@ public:
 
     float score{FLT_MAX};
     std::vector<std::vector<int>> scores;
-    //std::vector<int> scores(3, INT_MAX);
     int id{0};
     int row{0};
     int column{0};

@@ -13,7 +13,6 @@ void VulkanScene1::init()
     registerAction(SDL_SCANCODE_R, "FINDPATH");
     registerAction(SDL_SCANCODE_F, "GENERATEMAZE");
     registerAction(SDL_BUTTON_LEFT, "MOUSECLICK");
-    registerAction(SDL_MOUSEMOTION, "MOUSEMOTION");
 
     SDL_GetWindowSize(m_ge->window(), &windowX, &windowY);
 
@@ -84,10 +83,6 @@ void VulkanScene1::sDoAction(const Action& action)
     else if (action.name() == "MOUSECLICK" && action.event().type == SDL_MOUSEBUTTONDOWN)
     {
         spawnEnemy(action.event().button.x, action.event().button.y);
-    }
-    else if (action.name() == "MOUSEMOTION")
-    {
-        //spawnEnemy(action.event().button.x, action.event().button.y);
     }
     else if (action.type() == "START" && action.name() == "FINDPATH")
     {

@@ -1,3 +1,7 @@
+/// used sources from the internet
+/// https://devlog.hexops.com/2022/lets-build-ecs-part-1/
+/// https://github.com/SanderMertens/ecs-faq
+
 #ifndef GAMEENGINE_H
 #define GAMEENGINE_H
 

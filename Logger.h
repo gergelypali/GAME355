@@ -46,7 +46,6 @@ public:
 
     void writeToFile(const std::string& msg, severity sev)
     {
-        //return; // little hack to disable the logging; figure out a better way to control the loglevels
         if (m_logLevel > sev)
             return;
         if (!outToFile.is_open())

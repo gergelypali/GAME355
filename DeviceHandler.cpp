@@ -288,12 +288,6 @@ bool DeviceHandler::isDeviceGoodForUs(const VkPhysicalDevice& device)
     vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
     Logger::Instance()->logVerbose("Vulkan: isDeviceGoodForUs 2");
 
-    // check the properties; like is it a discrete GPU or not
-    // dont need this, M1 Air will fail here
-    //bool isDiscreteGPU{false};
-    //if (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
-    //    isDiscreteGPU = true;
-
     Logger::Instance()->logVerbose("Vulkan: isDeviceGoodForUs 3");
     // check the available queueFamilies
     uint32_t queueFamilyCount{0};
@@ -477,7 +471,6 @@ void DeviceHandler::createSyncObjects()
 void DeviceHandler::recordCommand(VkCommandBuffer buffer, uint32_t imageIndex)
 {
     VkCommandBufferBeginInfo beginInfo{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
-    //checkVkResult(vkBeginCommandBuffer(m_commandBuffer, &beginInfo));
     /* flag
     without any setting; so neither of these; the commandbuffer will go back to executable state
     VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT: The command buffer will be rerecorded right after executing it once.
@@ -501,11 +494,6 @@ void DeviceHandler::recordCommand(VkCommandBuffer buffer, uint32_t imageIndex)
     VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS: The render pass commands will be executed from secondary command buffers.
     */
 
-    //vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_baseGraphicsPipeline.pipeline);
-
-    //vkCmdSetViewport(buffer, 0, 1, &m_baseGraphicsPipeline.viewport);
-    //vkCmdSetScissor(buffer, 0, 1, &m_baseGraphicsPipeline.scissor);
-
     vkCmdDraw(buffer, 4, 1, 0, 0);
 
     vkCmdEndRenderPass(buffer);
@@ -514,8 +502,6 @@ void DeviceHandler::recordCommand(VkCommandBuffer buffer, uint32_t imageIndex)
 }
 
 void DeviceHandler::createLogicalDevice() {
-    // we are just using one queue for graphics and present; but later maybe we need more
-    // for example a good old compute shader for calculating a lot
     VkDeviceQueueCreateInfo queueCreateInfo[1] = {};
     queueCreateInfo[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
     queueCreateInfo[0].pNext = NULL;
@@ -678,11 +664,6 @@ void DeviceHandler::drawFrame(VkCommandBuffer& buffer)
         VK_NULL_HANDLE,
         &m_currentImageIndex
         );
-
-    //printf("imageindex %d\n", imageIndex);
-    //vkResetCommandBuffer(m_commandBuffer, 0);
-
-    //recordCommand(m_commandBuffer, imageIndex);
 
     VkSubmitInfo submitInfo{VK_STRUCTURE_TYPE_SUBMIT_INFO};
 
