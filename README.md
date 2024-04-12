@@ -15,3 +15,6 @@ The following keys can be used
 + Q Exit game
 + F Create new maze, reset player to start position
 + R Find and display path
+# Requirements
++ Installed VulkanSDK
++ Installed SDL, SDL_image, SDL_TTF, SDL_mixer
